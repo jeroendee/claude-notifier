@@ -26,13 +26,14 @@ func run() error {
 	soundPlayer := notification.NewSoundPlayer(cfg.SoundFile)
 	srv := server.NewServer(cfg.Port, store, soundPlayer)
 
-	systray := ui.NewSystray("assets/icon.png")
-	menu := ui.NewMenu(systray, store)
+	tray := ui.NewSystray("assets/icon.png")
+	menu := ui.NewMenu(tray, store)
+	tray.SetMenu(menu)
 
 	application := app.New(cfg).
 		SetStore(store).
 		SetServer(srv).
-		SetSystray(systray).
+		SetSystray(tray).
 		SetMenu(menu)
 
 	fmt.Printf("Claude notifier starting on port %d...\n", cfg.Port)

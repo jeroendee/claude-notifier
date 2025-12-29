@@ -3,15 +3,14 @@ package ui
 import (
 	"fmt"
 
-	"fyne.io/fyne/v2"
+	"fyne.io/systray"
 	"github.com/jeroendee/claude-notifier/internal/notification"
 )
 
 // Menu manages the system tray menu showing notification history.
 type Menu struct {
-	systray   *Systray
-	store     *notification.Store
-	builtMenu *fyne.Menu
+	systray *Systray
+	store   *notification.Store
 }
 
 // NewMenu creates a new Menu with the given systray and notification store.
@@ -23,17 +22,15 @@ func NewMenu(systray *Systray, store *notification.Store) *Menu {
 }
 
 // Build constructs the system tray menu from the notification store.
-func (m *Menu) Build() *fyne.Menu {
-	var items []*fyne.MenuItem
+func (m *Menu) Build() {
+	systray.ResetMenu()
 
 	// Header with unread count
 	unreadCount := m.store.UnreadCount()
-	header := fyne.NewMenuItem(fmt.Sprintf("Notifications (%d unread)", unreadCount), nil)
-	header.Disabled = true
-	items = append(items, header)
+	header := systray.AddMenuItem(fmt.Sprintf("Notifications (%d unread)", unreadCount), "")
+	header.Disable()
 
-	// Separator after header
-	items = append(items, fyne.NewMenuItemSeparator())
+	systray.AddSeparator()
 
 	// Notification history items (newest first)
 	notifications := m.store.List()
@@ -45,38 +42,42 @@ func (m *Menu) Build() *fyne.Menu {
 		}
 		label := fmt.Sprintf("%s %s", indicator, n.Message)
 		notificationID := n.ID
-		item := fyne.NewMenuItem(label, func() {
-			m.store.MarkRead(notificationID)
-		})
-		items = append(items, item)
+		item := systray.AddMenuItem(label, "Click to mark as read")
+
+		go func(id string, menuItem *systray.MenuItem) {
+			for range menuItem.ClickedCh {
+				m.store.MarkRead(id)
+			}
+		}(notificationID, item)
 	}
 
-	// Separator before actions
-	items = append(items, fyne.NewMenuItemSeparator())
+	systray.AddSeparator()
 
 	// Action items
-	markAllRead := fyne.NewMenuItem("Mark All Read", func() {
-		m.store.MarkAllRead()
-	})
-	items = append(items, markAllRead)
-
-	clearHistory := fyne.NewMenuItem("Clear History", func() {
-		m.store.Clear()
-	})
-	items = append(items, clearHistory)
-
-	// Separator before quit
-	items = append(items, fyne.NewMenuItemSeparator())
-
-	quit := fyne.NewMenuItem("Quit", func() {
-		if m.systray != nil && m.systray.App() != nil {
-			m.systray.App().Quit()
+	markAllRead := systray.AddMenuItem("Mark All Read", "Mark all notifications as read")
+	go func() {
+		for range markAllRead.ClickedCh {
+			m.store.MarkAllRead()
 		}
-	})
-	items = append(items, quit)
+	}()
 
-	m.builtMenu = fyne.NewMenu("", items...)
-	return m.builtMenu
+	clearHistory := systray.AddMenuItem("Clear History", "Remove all notifications")
+	go func() {
+		for range clearHistory.ClickedCh {
+			m.store.Clear()
+		}
+	}()
+
+	systray.AddSeparator()
+
+	quit := systray.AddMenuItem("Quit", "Quit the application")
+	go func() {
+		for range quit.ClickedCh {
+			if m.systray != nil {
+				m.systray.Quit()
+			}
+		}
+	}()
 }
 
 // Refresh rebuilds the menu from the current store state.

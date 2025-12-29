@@ -4,51 +4,59 @@ import (
 	"fmt"
 	"os"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/systray"
 )
 
 // Systray manages the system tray icon and menu bar presence.
 type Systray struct {
-	app      fyne.App
 	iconPath string
+	iconData []byte
+	menu     *Menu
+	quitCh   chan struct{}
 }
 
 // NewSystray creates a new Systray with the specified icon path.
 func NewSystray(iconPath string) *Systray {
 	return &Systray{
 		iconPath: iconPath,
+		quitCh:   make(chan struct{}),
 	}
 }
 
-// Setup creates the Fyne app and sets the system tray icon.
+// Setup validates the icon file exists and loads it.
 func (s *Systray) Setup() error {
-	// Verify icon file exists
 	iconData, err := os.ReadFile(s.iconPath)
 	if err != nil {
 		return fmt.Errorf("icon file not found: %w", err)
 	}
-
-	s.app = app.New()
-
-	// Set system tray icon if desktop app is supported
-	if deskApp, ok := s.app.(desktop.App); ok {
-		icon := fyne.NewStaticResource("icon", iconData)
-		deskApp.SetSystemTrayIcon(icon)
-	}
-
+	s.iconData = iconData
 	return nil
 }
 
-// App returns the Fyne app for menu setup.
-func (s *Systray) App() fyne.App {
-	return s.app
+// SetMenu sets the menu to be displayed in the systray.
+func (s *Systray) SetMenu(menu *Menu) {
+	s.menu = menu
 }
 
-// Run runs the Fyne app event loop (blocking).
+// Run starts the systray event loop (blocking).
 func (s *Systray) Run() {
-	if s.app != nil {
-		s.app.Run()
+	systray.Run(s.onReady, s.onExit)
+}
+
+// Quit signals the systray to quit.
+func (s *Systray) Quit() {
+	systray.Quit()
+}
+
+func (s *Systray) onReady() {
+	systray.SetIcon(s.iconData)
+	systray.SetTooltip("Claude Notifier")
+
+	if s.menu != nil {
+		s.menu.Build()
 	}
+}
+
+func (s *Systray) onExit() {
+	close(s.quitCh)
 }
