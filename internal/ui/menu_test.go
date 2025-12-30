@@ -25,6 +25,20 @@ func TestNewMenu(t *testing.T) {
 	}
 }
 
+func TestMenuHasAboutField(t *testing.T) {
+	t.Parallel()
+
+	systray := &Systray{}
+	store := notification.NewStore()
+	menu := NewMenu(systray, store)
+
+	// Verify about field exists (will be nil before Build is called)
+	// This test ensures the Menu struct has the about field defined
+	if menu.about != nil {
+		t.Error("about should be nil before Build is called")
+	}
+}
+
 // Note: Build() and Refresh() methods use fyne.io/systray global state
 // and cannot be unit tested in isolation. These are tested through
 // integration testing by running the actual application.

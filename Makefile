@@ -5,10 +5,12 @@
 BINARY_NAME := claude-notifier
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 BUILD_DIR := bin
-INSTALL_DIR := /usr/local/bin
 LAUNCHAGENT_DIR := $(HOME)/Library/LaunchAgents
 PLIST_NAME := com.dee.claude-notifier.plist
-LDFLAGS := -ldflags "-X main.version=$(VERSION)"
+COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+LDFLAGS := -ldflags "-X github.com/jeroendee/claude-notifier/internal/version.Version=$(VERSION) -X github.com/jeroendee/claude-notifier/internal/version.Commit=$(COMMIT) -X github.com/jeroendee/claude-notifier/internal/version.BuildDate=$(BUILD_DATE)"
 
 # Default target
 .DEFAULT_GOAL := build
@@ -19,7 +21,7 @@ LDFLAGS := -ldflags "-X main.version=$(VERSION)"
 # Build the binary
 build:
 	@mkdir -p $(BUILD_DIR)
-	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/notifier ./cmd/notifier
+	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/claude-notifier
 
 # Run tests
 test:
@@ -37,21 +39,24 @@ lint:
 clean:
 	rm -rf $(BUILD_DIR)/
 
-# Install binary to /usr/local/bin
-install: build
-	@echo "Installing $(BINARY_NAME) to $(INSTALL_DIR)"
-	install -m 755 $(BUILD_DIR)/notifier $(INSTALL_DIR)/$(BINARY_NAME)
+# Install binary to GOPATH/bin (or GOBIN if set)
+install:
+	go install $(LDFLAGS) ./cmd/claude-notifier
 
-# Remove installed binary
+# Remove installed binary from GOPATH/bin
 uninstall:
-	@echo "Removing $(BINARY_NAME) from $(INSTALL_DIR)"
-	rm -f $(INSTALL_DIR)/$(BINARY_NAME)
+	@GOBIN=$$(go env GOBIN); \
+	if [ -z "$$GOBIN" ]; then GOBIN=$$(go env GOPATH)/bin; fi; \
+	echo "Removing $(BINARY_NAME) from $$GOBIN"; \
+	rm -f "$$GOBIN/$(BINARY_NAME)"
 
 # Install LaunchAgent for auto-start on login
 install-launchagent: install
 	@echo "Installing LaunchAgent to $(LAUNCHAGENT_DIR)"
 	@mkdir -p $(LAUNCHAGENT_DIR)
-	cp scripts/$(PLIST_NAME) $(LAUNCHAGENT_DIR)/$(PLIST_NAME)
+	@GOBIN=$$(go env GOBIN); \
+	if [ -z "$$GOBIN" ]; then GOBIN=$$(go env GOPATH)/bin; fi; \
+	sed "s|__BINARY_PATH__|$$GOBIN/$(BINARY_NAME)|g" scripts/$(PLIST_NAME) > $(LAUNCHAGENT_DIR)/$(PLIST_NAME)
 	launchctl load $(LAUNCHAGENT_DIR)/$(PLIST_NAME)
 	@echo "LaunchAgent installed and loaded"
 
@@ -91,12 +96,12 @@ install-hook:
 # Show help
 help:
 	@echo "Targets:"
-	@echo "  build      Build the binary to $(BUILD_DIR)/notifier"
+	@echo "  build      Build the binary to $(BUILD_DIR)/$(BINARY_NAME)"
 	@echo "  test       Run tests"
 	@echo "  lint       Run linter (if golangci-lint is available)"
 	@echo "  clean      Remove $(BUILD_DIR)/ directory"
-	@echo "  install              Install binary to $(INSTALL_DIR)/$(BINARY_NAME)"
-	@echo "  uninstall            Remove binary from $(INSTALL_DIR)"
+	@echo "  install              Install binary to GOPATH/bin"
+	@echo "  uninstall            Remove binary from GOPATH/bin"
 	@echo "  install-launchagent  Install LaunchAgent for auto-start on login"
 	@echo "  uninstall-launchagent Unload and remove LaunchAgent"
 	@echo "  install-hook         Install Claude Code hook script"
@@ -106,4 +111,3 @@ help:
 	@echo "  BINARY_NAME = $(BINARY_NAME)"
 	@echo "  VERSION     = $(VERSION)"
 	@echo "  BUILD_DIR   = $(BUILD_DIR)"
-	@echo "  INSTALL_DIR = $(INSTALL_DIR)"

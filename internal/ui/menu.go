@@ -5,6 +5,7 @@ import (
 
 	"github.com/getlantern/systray"
 	"github.com/jeroendee/claude-notifier/internal/notification"
+	"github.com/jeroendee/claude-notifier/internal/version"
 )
 
 const maxNotificationItems = 20
@@ -23,6 +24,7 @@ type Menu struct {
 	notificationItems []*notificationItem
 	markAllRead       *systray.MenuItem
 	clearHistory      *systray.MenuItem
+	about             *systray.MenuItem
 	quit              *systray.MenuItem
 	built             bool
 }
@@ -83,6 +85,10 @@ func (m *Menu) Build() {
 	}()
 
 	systray.AddSeparator()
+
+	// About item with version (disabled, informational only)
+	m.about = systray.AddMenuItem(fmt.Sprintf("About (%s)", version.Get().Version), "")
+	m.about.Disable()
 
 	m.quit = systray.AddMenuItem("Quit", "Quit the application")
 	go func() {
