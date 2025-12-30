@@ -52,11 +52,8 @@ uninstall:
 
 # Install LaunchAgent for auto-start on login
 install-launchagent: install
-	@echo "Installing LaunchAgent to $(LAUNCHAGENT_DIR)"
-	@mkdir -p $(LAUNCHAGENT_DIR)
-	@GOBIN=$$(go env GOBIN); \
-	if [ -z "$$GOBIN" ]; then GOBIN=$$(go env GOPATH)/bin; fi; \
-	sed "s|__BINARY_PATH__|$$GOBIN/$(BINARY_NAME)|g" scripts/$(PLIST_NAME) > $(LAUNCHAGENT_DIR)/$(PLIST_NAME)
+	@echo "Installing LaunchAgent to $(LAUNCHAGENT_DIR)..."
+	@go run ./cmd/install-launchagent
 	launchctl load $(LAUNCHAGENT_DIR)/$(PLIST_NAME)
 	@echo "LaunchAgent installed and loaded"
 
@@ -69,12 +66,8 @@ uninstall-launchagent:
 
 # Install Claude Code hook script
 install-hook:
-	@echo "Installing Claude Code hook script"
-	@mkdir -p $(HOME)/.claude/hooks
-	cp scripts/claude-hook.sh $(HOME)/.claude/hooks/claude-hook.sh
-	chmod +x $(HOME)/.claude/hooks/claude-hook.sh
-	@echo ""
-	@echo "Hook script installed to ~/.claude/hooks/claude-hook.sh"
+	@echo "Installing Claude Code hook script..."
+	@go run ./cmd/install-hook
 	@echo ""
 	@echo "To configure Claude Code to use this hook, add to ~/.claude/settings.json:"
 	@echo '  {'
