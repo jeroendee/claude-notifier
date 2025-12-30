@@ -3,84 +3,136 @@ package ui
 import (
 	"fmt"
 
-	"fyne.io/systray"
+	"github.com/getlantern/systray"
 	"github.com/jeroendee/claude-notifier/internal/notification"
 )
 
+const maxNotificationItems = 20
+
+// notificationItem holds a menu item and its associated notification ID.
+type notificationItem struct {
+	menuItem *systray.MenuItem
+	id       string
+}
+
 // Menu manages the system tray menu showing notification history.
 type Menu struct {
-	systray *Systray
-	store   *notification.Store
+	systray           *Systray
+	store             *notification.Store
+	header            *systray.MenuItem
+	notificationItems []*notificationItem
+	markAllRead       *systray.MenuItem
+	clearHistory      *systray.MenuItem
+	quit              *systray.MenuItem
+	built             bool
 }
 
 // NewMenu creates a new Menu with the given systray and notification store.
 func NewMenu(systray *Systray, store *notification.Store) *Menu {
 	return &Menu{
-		systray: systray,
-		store:   store,
+		systray:           systray,
+		store:             store,
+		notificationItems: make([]*notificationItem, 0, maxNotificationItems),
 	}
 }
 
-// Build constructs the system tray menu from the notification store.
+// Build constructs the system tray menu. Called once during initialization.
 func (m *Menu) Build() {
-	systray.ResetMenu()
+	if m.built {
+		return
+	}
 
 	// Header with unread count
-	unreadCount := m.store.UnreadCount()
-	header := systray.AddMenuItem(fmt.Sprintf("Notifications (%d unread)", unreadCount), "")
-	header.Disable()
+	m.header = systray.AddMenuItem("Notifications (0 unread)", "")
+	m.header.Disable()
 
 	systray.AddSeparator()
 
-	// Notification history items (newest first)
-	notifications := m.store.List()
-	for i := len(notifications) - 1; i >= 0; i-- {
-		n := notifications[i]
-		indicator := "●" // unread
-		if n.Read {
-			indicator = "○" // read
-		}
-		label := fmt.Sprintf("%s %s", indicator, n.Message)
-		notificationID := n.ID
-		item := systray.AddMenuItem(label, "Click to mark as read")
+	// Pre-create notification item slots (hidden initially)
+	for i := 0; i < maxNotificationItems; i++ {
+		item := systray.AddMenuItem("", "Click to mark as read")
+		item.Hide()
+		ni := &notificationItem{menuItem: item, id: ""}
+		m.notificationItems = append(m.notificationItems, ni)
 
-		go func(id string, menuItem *systray.MenuItem) {
-			for range menuItem.ClickedCh {
-				m.store.MarkRead(id)
+		// Click handler - uses closure to access the item's current ID
+		go func(ni *notificationItem) {
+			for range ni.menuItem.ClickedCh {
+				if ni.id != "" {
+					m.store.MarkRead(ni.id)
+				}
 			}
-		}(notificationID, item)
+		}(ni)
 	}
 
 	systray.AddSeparator()
 
 	// Action items
-	markAllRead := systray.AddMenuItem("Mark All Read", "Mark all notifications as read")
+	m.markAllRead = systray.AddMenuItem("Mark All Read", "Mark all notifications as read")
 	go func() {
-		for range markAllRead.ClickedCh {
+		for range m.markAllRead.ClickedCh {
 			m.store.MarkAllRead()
 		}
 	}()
 
-	clearHistory := systray.AddMenuItem("Clear History", "Remove all notifications")
+	m.clearHistory = systray.AddMenuItem("Clear History", "Remove all notifications")
 	go func() {
-		for range clearHistory.ClickedCh {
+		for range m.clearHistory.ClickedCh {
 			m.store.Clear()
 		}
 	}()
 
 	systray.AddSeparator()
 
-	quit := systray.AddMenuItem("Quit", "Quit the application")
+	m.quit = systray.AddMenuItem("Quit", "Quit the application")
 	go func() {
-		for range quit.ClickedCh {
+		for range m.quit.ClickedCh {
 			if m.systray != nil {
 				m.systray.Quit()
 			}
 		}
 	}()
+
+	m.built = true
+
+	// Initial refresh to set correct values
+	m.Refresh()
 }
 
-// Refresh rebuilds the menu from the current store state.
+// Refresh updates the menu to reflect the current store state.
 func (m *Menu) Refresh() {
-	m.Build()
+	if !m.built {
+		return
+	}
+
+	// Update header with unread count
+	unreadCount := m.store.UnreadCount()
+	m.header.SetTitle(fmt.Sprintf("Notifications (%d unread)", unreadCount))
+
+	// Get notifications (newest first)
+	notifications := m.store.List()
+
+	// Update notification items
+	itemIndex := 0
+	for i := len(notifications) - 1; i >= 0 && itemIndex < maxNotificationItems; i-- {
+		n := notifications[i]
+		indicator := "●" // unread
+		if n.Read {
+			indicator = "○" // read
+		}
+		label := fmt.Sprintf("%s %s", indicator, n.Message)
+
+		ni := m.notificationItems[itemIndex]
+		ni.id = n.ID
+		ni.menuItem.SetTitle(label)
+		ni.menuItem.Show()
+		itemIndex++
+	}
+
+	// Hide unused notification items
+	for ; itemIndex < maxNotificationItems; itemIndex++ {
+		ni := m.notificationItems[itemIndex]
+		ni.id = ""
+		ni.menuItem.Hide()
+	}
 }

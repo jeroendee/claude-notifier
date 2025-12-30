@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"fyne.io/systray"
+	"github.com/getlantern/systray"
 )
 
 // Systray manages the system tray icon and menu bar presence.
