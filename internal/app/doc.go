@@ -1,4 +1,4 @@
-// Package app provides application orchestration for the notifier.
+// Package app provides application orchestration for claude-notifier.
 //
 // It coordinates the lifecycle of all components: HTTP server, notification
 // store, system tray, and menu. The [App] type uses a builder pattern for

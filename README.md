@@ -211,7 +211,7 @@ Requires `golangci-lint` to be installed.
 
 ```
 claude-notifier/
-├── cmd/notifier/      # Main entry point
+├── cmd/claude-notifier/  # Main entry point
 ├── internal/
 │   ├── app/           # App orchestration and config
 │   ├── notification/  # Store and sound player

@@ -54,6 +54,6 @@ func run() error {
 		SetSystray(tray).
 		SetMenu(menu)
 
-	fmt.Printf("Claude notifier starting on port %d...\n", cfg.Port)
+	fmt.Printf("claude-notifier starting on port %d...\n", cfg.Port)
 	return application.Run()
 }

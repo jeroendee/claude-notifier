@@ -1,4 +1,4 @@
-// Notifier is a macOS menu bar application that displays notifications
+// claude-notifier is a macOS menu bar application that displays notifications
 // from Claude Code.
 //
 // It runs as a system tray application, listening for webhook requests
@@ -6,9 +6,9 @@
 //
 // # Usage
 //
-// Start the notifier:
+// Start claude-notifier:
 //
-//	notifier
+//	claude-notifier
 //
 // The application listens on localhost:19199 by default. Claude Code
 // sends POST requests to /notify with a JSON body containing a message.
@@ -17,9 +17,9 @@
 //
 // Environment variables:
 //
-//	NOTIFIER_PORT        HTTP server port (default: 19199)
-//	NOTIFIER_SOUND       Path to notification sound file
-//	NOTIFIER_MAX_HISTORY Maximum stored notifications (default: 50)
+//	CLAUDE_NOTIFIER_PORT        HTTP server port (default: 19199)
+//	CLAUDE_NOTIFIER_SOUND       Path to notification sound file
+//	CLAUDE_NOTIFIER_MAX_HISTORY Maximum stored notifications (default: 50)
 //
 // # Endpoints
 //
