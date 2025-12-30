@@ -11,6 +11,7 @@ import (
 // Store defines the interface for notification storage.
 type Store interface {
 	SetOnChange(fn func())
+	UnreadCount() int
 }
 
 // Server defines the interface for the HTTP server.
@@ -23,6 +24,7 @@ type Server interface {
 type Systray interface {
 	Setup() error
 	Run()
+	SetAlertState(hasUnread bool)
 }
 
 // Menu defines the interface for the system tray menu.
@@ -58,6 +60,11 @@ func (a *App) Run() error {
 	// Set up onChange callback
 	a.setupOnChange()
 
+	// Set initial icon state based on existing notifications
+	if a.systray != nil && a.store != nil {
+		a.systray.SetAlertState(a.store.UnreadCount() > 0)
+	}
+
 	// Start HTTP server
 	if a.server != nil {
 		if err := a.server.Start(); err != nil {
@@ -85,11 +92,15 @@ func (a *App) Run() error {
 	return nil
 }
 
-// setupOnChange configures the store's onChange callback to refresh the menu.
+// setupOnChange configures the store's onChange callback to refresh the menu
+// and update the systray icon alert state.
 func (a *App) setupOnChange() {
 	if a.store != nil && a.menu != nil {
 		a.store.SetOnChange(func() {
 			a.menu.Refresh()
+			if a.systray != nil {
+				a.systray.SetAlertState(a.store.UnreadCount() > 0)
+			}
 		})
 	}
 }

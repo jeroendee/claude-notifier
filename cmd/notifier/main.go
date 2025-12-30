@@ -26,7 +26,7 @@ func run() error {
 	soundPlayer := notification.NewSoundPlayer(cfg.SoundFile)
 	srv := server.NewServer(cfg.Port, store, soundPlayer)
 
-	tray := ui.NewSystray("assets/icon.png")
+	tray := ui.NewSystray("assets/icon.png", "assets/icon-alert.png")
 	menu := ui.NewMenu(tray, store)
 	tray.SetMenu(menu)
 

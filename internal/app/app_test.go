@@ -10,10 +10,15 @@ import (
 
 type mockStore struct {
 	onChangeCallback func()
+	unreadCount      int
 }
 
 func (m *mockStore) SetOnChange(fn func()) {
 	m.onChangeCallback = fn
+}
+
+func (m *mockStore) UnreadCount() int {
+	return m.unreadCount
 }
 
 type mockSoundPlayer struct{}
@@ -59,16 +64,18 @@ func (m *mockServer) Stopped() bool {
 }
 
 type mockSystray struct {
-	mu         sync.Mutex
-	setupCalls int
-	runCalls   int
-	quitChan   chan struct{}
-	setupErr   error
+	mu              sync.Mutex
+	setupCalls      int
+	runCalls        int
+	quitChan        chan struct{}
+	setupErr        error
+	alertStateCalls []bool
 }
 
 func newMockSystray() *mockSystray {
 	return &mockSystray{
-		quitChan: make(chan struct{}),
+		quitChan:        make(chan struct{}),
+		alertStateCalls: make([]bool, 0),
 	}
 }
 
@@ -93,6 +100,12 @@ func (m *mockSystray) Quit() {
 	close(m.quitChan)
 }
 
+func (m *mockSystray) SetAlertState(hasUnread bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.alertStateCalls = append(m.alertStateCalls, hasUnread)
+}
+
 func (m *mockSystray) SetupCalls() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -103,6 +116,14 @@ func (m *mockSystray) RunCalls() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.runCalls
+}
+
+func (m *mockSystray) AlertStateCalls() []bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	result := make([]bool, len(m.alertStateCalls))
+	copy(result, m.alertStateCalls)
+	return result
 }
 
 type mockMenu struct {
@@ -456,5 +477,162 @@ func TestApp_SetMenu(t *testing.T) {
 	}
 	if result != app {
 		t.Error("SetMenu did not return app for chaining")
+	}
+}
+
+func TestApp_OnChangeSetsAlertStateTrue(t *testing.T) {
+	t.Parallel()
+
+	store := &mockStore{unreadCount: 3}
+	menu := &mockMenu{}
+	systray := newMockSystray()
+
+	app := New(&Config{})
+	app.store = store
+	app.menu = menu
+	app.systray = systray
+
+	app.setupOnChange()
+
+	// Trigger the callback
+	store.onChangeCallback()
+
+	calls := systray.AlertStateCalls()
+	if len(calls) != 1 {
+		t.Fatalf("SetAlertState called %d times, want 1", len(calls))
+	}
+	if !calls[0] {
+		t.Error("SetAlertState(true) expected when UnreadCount > 0")
+	}
+}
+
+func TestApp_OnChangeSetsAlertStateFalse(t *testing.T) {
+	t.Parallel()
+
+	store := &mockStore{unreadCount: 0}
+	menu := &mockMenu{}
+	systray := newMockSystray()
+
+	app := New(&Config{})
+	app.store = store
+	app.menu = menu
+	app.systray = systray
+
+	app.setupOnChange()
+
+	// Trigger the callback
+	store.onChangeCallback()
+
+	calls := systray.AlertStateCalls()
+	if len(calls) != 1 {
+		t.Fatalf("SetAlertState called %d times, want 1", len(calls))
+	}
+	if calls[0] {
+		t.Error("SetAlertState(false) expected when UnreadCount == 0")
+	}
+}
+
+func TestApp_InitialAlertStateOnStartup(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		unreadCount int
+		wantAlert   bool
+	}{
+		{
+			name:        "sets alert state true when unread notifications exist",
+			unreadCount: 5,
+			wantAlert:   true,
+		},
+		{
+			name:        "sets alert state false when no unread notifications",
+			unreadCount: 0,
+			wantAlert:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			store := &mockStore{unreadCount: tt.unreadCount}
+			server := &mockServer{}
+			systray := newMockSystray()
+			menu := &mockMenu{}
+
+			app := New(&Config{})
+			app.store = store
+			app.server = server
+			app.systray = systray
+			app.menu = menu
+
+			done := make(chan struct{})
+			go func() {
+				app.Run()
+				close(done)
+			}()
+
+			// Quit systray to unblock Run()
+			systray.Quit()
+			<-done
+
+			calls := systray.AlertStateCalls()
+			if len(calls) < 1 {
+				t.Fatal("SetAlertState not called on startup")
+			}
+			// First call should be initial state
+			if calls[0] != tt.wantAlert {
+				t.Errorf("Initial SetAlertState(%v) expected, got SetAlertState(%v)", tt.wantAlert, calls[0])
+			}
+		})
+	}
+}
+
+func TestApp_SetAlertStateNotCalledWhenSystrayNil(t *testing.T) {
+	t.Parallel()
+
+	store := &mockStore{unreadCount: 3}
+	menu := &mockMenu{}
+
+	app := New(&Config{})
+	app.store = store
+	app.menu = menu
+	// systray is nil
+
+	// Should not panic
+	app.setupOnChange()
+
+	if store.onChangeCallback == nil {
+		t.Fatal("onChange callback should still be set")
+	}
+
+	// Trigger callback - should not panic with nil systray
+	store.onChangeCallback()
+
+	// Menu should still be refreshed
+	if menu.RefreshCalls() != 1 {
+		t.Errorf("menu.Refresh() called %d times, want 1", menu.RefreshCalls())
+	}
+}
+
+func TestApp_SetAlertStateNotCalledWhenStoreNil(t *testing.T) {
+	t.Parallel()
+
+	systray := newMockSystray()
+	menu := &mockMenu{}
+
+	app := New(&Config{})
+	app.systray = systray
+	app.menu = menu
+	// store is nil
+
+	// Should not panic
+	app.setupOnChange()
+
+	// No callback should be set since store is nil
+	calls := systray.AlertStateCalls()
+	if len(calls) != 0 {
+		t.Errorf("SetAlertState should not be called when store is nil, got %d calls", len(calls))
 	}
 }

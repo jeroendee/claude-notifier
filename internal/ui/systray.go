@@ -9,27 +9,38 @@ import (
 
 // Systray manages the system tray icon and menu bar presence.
 type Systray struct {
-	iconPath string
-	iconData []byte
-	menu     *Menu
-	quitCh   chan struct{}
+	iconPath        string
+	alertIconPath   string
+	iconData        []byte
+	alertIconData   []byte
+	currentIconData []byte
+	menu            *Menu
+	quitCh          chan struct{}
 }
 
-// NewSystray creates a new Systray with the specified icon path.
-func NewSystray(iconPath string) *Systray {
+// NewSystray creates a new Systray with the specified icon paths.
+func NewSystray(iconPath, alertIconPath string) *Systray {
 	return &Systray{
-		iconPath: iconPath,
-		quitCh:   make(chan struct{}),
+		iconPath:      iconPath,
+		alertIconPath: alertIconPath,
+		quitCh:        make(chan struct{}),
 	}
 }
 
-// Setup validates the icon file exists and loads it.
+// Setup validates icon files exist and loads them.
 func (s *Systray) Setup() error {
 	iconData, err := os.ReadFile(s.iconPath)
 	if err != nil {
 		return fmt.Errorf("icon file not found: %w", err)
 	}
 	s.iconData = iconData
+
+	alertIconData, err := os.ReadFile(s.alertIconPath)
+	if err != nil {
+		return fmt.Errorf("alert icon file not found: %w", err)
+	}
+	s.alertIconData = alertIconData
+
 	return nil
 }
 
@@ -46,6 +57,16 @@ func (s *Systray) Run() {
 // Quit signals the systray to quit.
 func (s *Systray) Quit() {
 	systray.Quit()
+}
+
+// SetAlertState switches between normal and alert icons based on unread state.
+func (s *Systray) SetAlertState(hasUnread bool) {
+	if hasUnread {
+		s.currentIconData = s.alertIconData
+	} else {
+		s.currentIconData = s.iconData
+	}
+	systray.SetIcon(s.currentIconData)
 }
 
 func (s *Systray) onReady() {
