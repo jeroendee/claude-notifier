@@ -5,10 +5,12 @@ A macOS menu bar notification app for Claude Code. Receive notifications when Cl
 ## Features
 
 - **Menu bar notifications** - Persistent icon in macOS menu bar shows notification history
+- **Dynamic icon state** - Icon changes from grey (idle) to orange when unread notifications exist
 - **Sound alerts** - Plays a sound when notifications arrive (configurable)
 - **Notification history** - Stores up to 50 notifications with read/unread status
 - **HTTP API** - Receive notifications via simple HTTP POST requests
 - **Claude Code integration** - Hook script for automatic task completion notifications
+- **Single binary** - All assets embedded via `go:embed` for easy distribution
 
 ## Quick Start
 
@@ -161,7 +163,7 @@ Returns `204 No Content`.
 │    Notification       │    │           UI (systray)             │
 │  (internal/notification)│   │          (internal/ui)             │
 │                       │    │                                    │
-│  • Store (history)    │    │  • Menu bar icon                   │
+│  • Store (history)    │    │  • Menu bar icon (dynamic state)   │
 │  • Sound player       │    │  • Notification list               │
 │  • Read/unread state  │    │  • Mark read / Clear actions       │
 └───────────────────────┘    └────────────────────────────────────┘
@@ -184,6 +186,8 @@ Returns `204 No Content`.
 | Store | `internal/notification` | Notification storage, read/unread tracking |
 | Sound | `internal/notification` | Play audio alerts via `afplay` |
 | UI | `internal/ui` | macOS menu bar integration via systray |
+| Assets | `internal/assets` | Embedded icons (normal and alert states) |
+| Scripts | `internal/scripts` | Embedded hook script and LaunchAgent plist |
 
 ## Development
 
@@ -214,17 +218,22 @@ claude-notifier/
 ├── cmd/claude-notifier/  # Main entry point
 ├── internal/
 │   ├── app/           # App orchestration and config
+│   ├── assets/        # Embedded icons (go:embed)
 │   ├── notification/  # Store and sound player
+│   ├── scripts/       # Embedded hook script and plist (go:embed)
 │   ├── server/        # HTTP server
-│   └── ui/            # macOS menu bar (systray)
-├── assets/            # Icon files
-├── scripts/           # Hook script and LaunchAgent
+│   ├── ui/            # macOS menu bar (systray)
+│   └── version/       # Version info (injected via ldflags)
 └── Makefile
 ```
 
 ## Menu Bar Interface
 
-When you click the claude-notifier icon in the menu bar, you see:
+The claude-notifier icon appears in your menu bar with two states:
+- **Grey robot** - No unread notifications (idle)
+- **Orange robot** - Unread notifications exist (alert)
+
+When you click the icon, you see:
 
 - **Header** - Shows unread count (e.g., "Notifications (3 unread)")
 - **Notifications** - Listed newest first with indicators:
@@ -232,10 +241,10 @@ When you click the claude-notifier icon in the menu bar, you see:
   - `○` = read
 - **Mark All Read** - Marks all notifications as read
 - **Clear History** - Removes all notifications
-- **About** - Shows version information
+- **About** - Shows version (e.g., "claude-notifier v1.0.0")
 - **Quit** - Stops the claude-notifier
 
-Clicking a notification marks it as read.
+Clicking a notification marks it as read. When all notifications are read, the icon returns to grey.
 
 ## Requirements
 
