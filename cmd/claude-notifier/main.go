@@ -1,5 +1,3 @@
-// ABOUTME: Notifier command - macOS menu bar notification app for Claude Code.
-// ABOUTME: This is the main entry point for the notifier application.
 package main
 
 import (

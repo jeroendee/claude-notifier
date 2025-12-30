@@ -1,5 +1,3 @@
-// ABOUTME: Package server provides HTTP server for receiving Claude Code webhooks.
-// ABOUTME: Handles incoming notification requests from Claude Code.
 package server
 
 import (

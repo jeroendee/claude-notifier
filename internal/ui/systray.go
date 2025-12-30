@@ -1,16 +1,13 @@
 package ui
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/getlantern/systray"
+
+	"github.com/jeroendee/claude-notifier/internal/assets"
 )
 
 // Systray manages the system tray icon and menu bar presence.
 type Systray struct {
-	iconPath        string
-	alertIconPath   string
 	iconData        []byte
 	alertIconData   []byte
 	currentIconData []byte
@@ -18,29 +15,17 @@ type Systray struct {
 	quitCh          chan struct{}
 }
 
-// NewSystray creates a new Systray with the specified icon paths.
-func NewSystray(iconPath, alertIconPath string) *Systray {
+// NewSystray creates a new Systray with embedded icon assets.
+func NewSystray() *Systray {
 	return &Systray{
-		iconPath:      iconPath,
-		alertIconPath: alertIconPath,
+		iconData:      assets.Icon,
+		alertIconData: assets.IconAlert,
 		quitCh:        make(chan struct{}),
 	}
 }
 
-// Setup validates icon files exist and loads them.
+// Setup initializes the systray. Icons are already embedded.
 func (s *Systray) Setup() error {
-	iconData, err := os.ReadFile(s.iconPath)
-	if err != nil {
-		return fmt.Errorf("icon file not found: %w", err)
-	}
-	s.iconData = iconData
-
-	alertIconData, err := os.ReadFile(s.alertIconPath)
-	if err != nil {
-		return fmt.Errorf("alert icon file not found: %w", err)
-	}
-	s.alertIconData = alertIconData
-
 	return nil
 }
 

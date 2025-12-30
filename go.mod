@@ -1,6 +1,6 @@
 module github.com/jeroendee/claude-notifier
 
-go 1.25
+go 1.25.5
 
 require github.com/getlantern/systray v1.2.1
 

@@ -636,3 +636,28 @@ func TestApp_SetAlertStateNotCalledWhenStoreNil(t *testing.T) {
 		t.Errorf("SetAlertState should not be called when store is nil, got %d calls", len(calls))
 	}
 }
+
+func TestApp_ServerStoppedWhenSystrayQuits(t *testing.T) {
+	t.Parallel()
+
+	server := &mockServer{}
+	systray := newMockSystray()
+
+	app := New(&Config{})
+	app.server = server
+	app.systray = systray
+
+	done := make(chan struct{})
+	go func() {
+		app.Run()
+		close(done)
+	}()
+
+	// Quit via systray menu (simulates user clicking Quit)
+	systray.Quit()
+	<-done
+
+	if !server.Stopped() {
+		t.Error("Server should be gracefully stopped when systray quits")
+	}
+}

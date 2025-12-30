@@ -9,7 +9,7 @@ func TestLoadConfig_DefaultPort(t *testing.T) {
 	t.Parallel()
 
 	// Ensure env var is not set
-	os.Unsetenv("NOTIFIER_PORT")
+	os.Unsetenv("CLAUDE_NOTIFIER_PORT")
 
 	cfg := LoadConfig()
 
@@ -19,8 +19,8 @@ func TestLoadConfig_DefaultPort(t *testing.T) {
 }
 
 func TestLoadConfig_CustomPort(t *testing.T) {
-	os.Setenv("NOTIFIER_PORT", "8080")
-	defer os.Unsetenv("NOTIFIER_PORT")
+	os.Setenv("CLAUDE_NOTIFIER_PORT", "8080")
+	defer os.Unsetenv("CLAUDE_NOTIFIER_PORT")
 
 	cfg := LoadConfig()
 
@@ -30,8 +30,8 @@ func TestLoadConfig_CustomPort(t *testing.T) {
 }
 
 func TestLoadConfig_InvalidPort(t *testing.T) {
-	os.Setenv("NOTIFIER_PORT", "invalid")
-	defer os.Unsetenv("NOTIFIER_PORT")
+	os.Setenv("CLAUDE_NOTIFIER_PORT", "invalid")
+	defer os.Unsetenv("CLAUDE_NOTIFIER_PORT")
 
 	cfg := LoadConfig()
 
@@ -43,7 +43,7 @@ func TestLoadConfig_InvalidPort(t *testing.T) {
 func TestLoadConfig_DefaultSoundFile(t *testing.T) {
 	t.Parallel()
 
-	os.Unsetenv("NOTIFIER_SOUND")
+	os.Unsetenv("CLAUDE_NOTIFIER_SOUND")
 
 	cfg := LoadConfig()
 
@@ -54,8 +54,8 @@ func TestLoadConfig_DefaultSoundFile(t *testing.T) {
 }
 
 func TestLoadConfig_CustomSoundFile(t *testing.T) {
-	os.Setenv("NOTIFIER_SOUND", "/custom/sound.wav")
-	defer os.Unsetenv("NOTIFIER_SOUND")
+	os.Setenv("CLAUDE_NOTIFIER_SOUND", "/custom/sound.wav")
+	defer os.Unsetenv("CLAUDE_NOTIFIER_SOUND")
 
 	cfg := LoadConfig()
 
@@ -68,7 +68,7 @@ func TestLoadConfig_CustomSoundFile(t *testing.T) {
 func TestLoadConfig_DefaultMaxHistory(t *testing.T) {
 	t.Parallel()
 
-	os.Unsetenv("NOTIFIER_MAX_HISTORY")
+	os.Unsetenv("CLAUDE_NOTIFIER_MAX_HISTORY")
 
 	cfg := LoadConfig()
 
@@ -78,8 +78,8 @@ func TestLoadConfig_DefaultMaxHistory(t *testing.T) {
 }
 
 func TestLoadConfig_CustomMaxHistory(t *testing.T) {
-	os.Setenv("NOTIFIER_MAX_HISTORY", "100")
-	defer os.Unsetenv("NOTIFIER_MAX_HISTORY")
+	os.Setenv("CLAUDE_NOTIFIER_MAX_HISTORY", "100")
+	defer os.Unsetenv("CLAUDE_NOTIFIER_MAX_HISTORY")
 
 	cfg := LoadConfig()
 
@@ -89,8 +89,8 @@ func TestLoadConfig_CustomMaxHistory(t *testing.T) {
 }
 
 func TestLoadConfig_InvalidMaxHistory(t *testing.T) {
-	os.Setenv("NOTIFIER_MAX_HISTORY", "invalid")
-	defer os.Unsetenv("NOTIFIER_MAX_HISTORY")
+	os.Setenv("CLAUDE_NOTIFIER_MAX_HISTORY", "invalid")
+	defer os.Unsetenv("CLAUDE_NOTIFIER_MAX_HISTORY")
 
 	cfg := LoadConfig()
 

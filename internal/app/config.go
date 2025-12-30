@@ -20,17 +20,17 @@ func LoadConfig() *Config {
 		MaxHistory: 50,
 	}
 
-	if portStr := os.Getenv("NOTIFIER_PORT"); portStr != "" {
+	if portStr := os.Getenv("CLAUDE_NOTIFIER_PORT"); portStr != "" {
 		if port, err := strconv.Atoi(portStr); err == nil {
 			cfg.Port = port
 		}
 	}
 
-	if soundFile := os.Getenv("NOTIFIER_SOUND"); soundFile != "" {
+	if soundFile := os.Getenv("CLAUDE_NOTIFIER_SOUND"); soundFile != "" {
 		cfg.SoundFile = soundFile
 	}
 
-	if maxHistStr := os.Getenv("NOTIFIER_MAX_HISTORY"); maxHistStr != "" {
+	if maxHistStr := os.Getenv("CLAUDE_NOTIFIER_MAX_HISTORY"); maxHistStr != "" {
 		if maxHist, err := strconv.Atoi(maxHistStr); err == nil {
 			cfg.MaxHistory = maxHist
 		}

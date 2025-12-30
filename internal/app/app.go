@@ -1,5 +1,3 @@
-// ABOUTME: Package app provides the main application orchestration.
-// ABOUTME: Coordinates server, notification, and UI components.
 package app
 
 import (
@@ -84,6 +82,7 @@ func (a *App) Run() error {
 			a.Shutdown()
 		}()
 		a.systray.Run()
+		a.Shutdown()
 	} else {
 		<-sigChan
 		a.Shutdown()

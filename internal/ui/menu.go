@@ -87,7 +87,7 @@ func (m *Menu) Build() {
 	systray.AddSeparator()
 
 	// About item with version (disabled, informational only)
-	m.about = systray.AddMenuItem(fmt.Sprintf("About (%s)", version.Get().Version), "")
+	m.about = systray.AddMenuItem(fmt.Sprintf("Version (%s)", version.Get().Version), "")
 	m.about.Disable()
 
 	m.quit = systray.AddMenuItem("Quit", "Quit the application")
