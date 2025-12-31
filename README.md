@@ -103,20 +103,20 @@ Now Claude Code will notify you when tasks complete.
 
 ## Summary Command
 
-The `summary` subcommand extracts the last markdown heading from a Claude Code transcript file:
+The `summary` subcommand extracts the last `[SESSION: ...]` marker from a Claude Code transcript file:
 
 ```bash
 claude-notifier summary /path/to/transcript.jsonl
 ```
 
-This outputs the last heading (## through ######) found in assistant messages. The hook script uses this to add context to notifications.
+This outputs the last session marker found in assistant messages. The hook script uses this to add context to notifications.
 
 **How it works:**
 - Parses the JSONL transcript file
-- Scans assistant messages for markdown headings
-- Returns the last heading found (without the `#` prefix)
+- Scans assistant messages for `[SESSION: ...]` markers
+- Returns the last marker found (e.g., `[SESSION: Fixed bug in parser]` → `Fixed bug in parser`)
 
-This heading-based approach replaces the previous Haiku-generated summaries, providing instant extraction without API calls.
+This marker-based approach provides instant extraction without API calls. Claude is instructed via CLAUDE.md to include a `[SESSION: ...]` summary line at the end of each task completion.
 
 ## HTTP API
 
