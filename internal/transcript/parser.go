@@ -103,9 +103,10 @@ func ExtractSessionSummary(messages []Message) string {
 				continue
 			}
 
-			matches := sessionRegex.FindStringSubmatch(block.Text)
-			if len(matches) >= 2 {
-				return strings.TrimSpace(matches[1])
+			allMatches := sessionRegex.FindAllStringSubmatch(block.Text, -1)
+			if len(allMatches) > 0 {
+				lastMatch := allMatches[len(allMatches)-1]
+				return strings.TrimSpace(lastMatch[1])
 			}
 		}
 	}

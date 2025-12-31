@@ -735,3 +735,24 @@ func TestExtractSessionSummary_OnlyChecksTextContentBlocks(t *testing.T) {
 		t.Errorf("ExtractSessionSummary() = %q, want %q", summary, "Text session found")
 	}
 }
+
+func TestExtractSessionSummary_ReturnsLastSessionMarkerFromSameTextBlock(t *testing.T) {
+	t.Parallel()
+
+	messages := []Message{
+		{
+			Type: "assistant",
+			Message: MessageContent{
+				Content: []ContentBlock{
+					{Type: "text", Text: "[SESSION: First summary]\n\nSome work done.\n\n[SESSION: Final summary]"},
+				},
+			},
+		},
+	}
+
+	summary := ExtractSessionSummary(messages)
+
+	if summary != "Final summary" {
+		t.Errorf("ExtractSessionSummary() = %q, want %q", summary, "Final summary")
+	}
+}
