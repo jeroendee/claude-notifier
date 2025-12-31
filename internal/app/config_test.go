@@ -64,37 +64,3 @@ func TestLoadConfig_CustomSoundFile(t *testing.T) {
 		t.Errorf("LoadConfig().SoundFile = %q, want %q", cfg.SoundFile, want)
 	}
 }
-
-func TestLoadConfig_DefaultMaxHistory(t *testing.T) {
-	t.Parallel()
-
-	os.Unsetenv("CLAUDE_NOTIFIER_MAX_HISTORY")
-
-	cfg := LoadConfig()
-
-	if cfg.MaxHistory != 50 {
-		t.Errorf("LoadConfig().MaxHistory = %d, want 50", cfg.MaxHistory)
-	}
-}
-
-func TestLoadConfig_CustomMaxHistory(t *testing.T) {
-	os.Setenv("CLAUDE_NOTIFIER_MAX_HISTORY", "100")
-	defer os.Unsetenv("CLAUDE_NOTIFIER_MAX_HISTORY")
-
-	cfg := LoadConfig()
-
-	if cfg.MaxHistory != 100 {
-		t.Errorf("LoadConfig().MaxHistory = %d, want 100", cfg.MaxHistory)
-	}
-}
-
-func TestLoadConfig_InvalidMaxHistory(t *testing.T) {
-	os.Setenv("CLAUDE_NOTIFIER_MAX_HISTORY", "invalid")
-	defer os.Unsetenv("CLAUDE_NOTIFIER_MAX_HISTORY")
-
-	cfg := LoadConfig()
-
-	if cfg.MaxHistory != 50 {
-		t.Errorf("LoadConfig().MaxHistory = %d, want 50 (default on invalid)", cfg.MaxHistory)
-	}
-}

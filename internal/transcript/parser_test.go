@@ -571,3 +571,167 @@ func TestParseTranscript_ParsesWhitespaceOnlyContent(t *testing.T) {
 		t.Errorf("ParseTranscript() content text = %q, want %q", messages[0].Message.Content[0].Text, "   ")
 	}
 }
+
+func TestExtractSessionSummary_ExtractsSingleSessionMarker(t *testing.T) {
+	t.Parallel()
+
+	messages := []Message{
+		{
+			Type: "assistant",
+			Message: MessageContent{
+				Content: []ContentBlock{
+					{Type: "text", Text: "Task completed.\n\n[SESSION: Fixed transcript parser string handling]"},
+				},
+			},
+		},
+	}
+
+	summary := ExtractSessionSummary(messages)
+
+	if summary != "Fixed transcript parser string handling" {
+		t.Errorf("ExtractSessionSummary() = %q, want %q", summary, "Fixed transcript parser string handling")
+	}
+}
+
+func TestExtractSessionSummary_ReturnsLastSessionMarkerFromMultipleMessages(t *testing.T) {
+	t.Parallel()
+
+	messages := []Message{
+		{
+			Type: "assistant",
+			Message: MessageContent{
+				Content: []ContentBlock{
+					{Type: "text", Text: "[SESSION: First task completed]"},
+				},
+			},
+		},
+		{
+			Type: "assistant",
+			Message: MessageContent{
+				Content: []ContentBlock{
+					{Type: "text", Text: "[SESSION: Second task completed]"},
+				},
+			},
+		},
+		{
+			Type: "assistant",
+			Message: MessageContent{
+				Content: []ContentBlock{
+					{Type: "text", Text: "[SESSION: Final task completed]"},
+				},
+			},
+		},
+	}
+
+	summary := ExtractSessionSummary(messages)
+
+	if summary != "Final task completed" {
+		t.Errorf("ExtractSessionSummary() = %q, want %q", summary, "Final task completed")
+	}
+}
+
+func TestExtractSessionSummary_ReturnsEmptyStringWhenNoSessionMarkerExists(t *testing.T) {
+	t.Parallel()
+
+	messages := []Message{
+		{
+			Type: "assistant",
+			Message: MessageContent{
+				Content: []ContentBlock{
+					{Type: "text", Text: "This is plain text without any session markers."},
+				},
+			},
+		},
+	}
+
+	summary := ExtractSessionSummary(messages)
+
+	if summary != "" {
+		t.Errorf("ExtractSessionSummary() = %q, want empty string", summary)
+	}
+}
+
+func TestExtractSessionSummary_IgnoresSessionMarkerInUserMessages(t *testing.T) {
+	t.Parallel()
+
+	messages := []Message{
+		{
+			Type: "user",
+			Message: MessageContent{
+				Content: []ContentBlock{
+					{Type: "text", Text: "[SESSION: User session should be ignored]"},
+				},
+			},
+		},
+		{
+			Type: "assistant",
+			Message: MessageContent{
+				Content: []ContentBlock{
+					{Type: "text", Text: "[SESSION: Assistant session marker]"},
+				},
+			},
+		},
+	}
+
+	summary := ExtractSessionSummary(messages)
+
+	if summary != "Assistant session marker" {
+		t.Errorf("ExtractSessionSummary() = %q, want %q", summary, "Assistant session marker")
+	}
+}
+
+func TestExtractSessionSummary_ReturnsEmptyStringForEmptyMessages(t *testing.T) {
+	t.Parallel()
+
+	var messages []Message
+
+	summary := ExtractSessionSummary(messages)
+
+	if summary != "" {
+		t.Errorf("ExtractSessionSummary() = %q, want empty string", summary)
+	}
+}
+
+func TestExtractSessionSummary_TrimsWhitespaceFromSessionValue(t *testing.T) {
+	t.Parallel()
+
+	messages := []Message{
+		{
+			Type: "assistant",
+			Message: MessageContent{
+				Content: []ContentBlock{
+					{Type: "text", Text: "[SESSION:   Whitespace trimmed   ]"},
+				},
+			},
+		},
+	}
+
+	summary := ExtractSessionSummary(messages)
+
+	if summary != "Whitespace trimmed" {
+		t.Errorf("ExtractSessionSummary() = %q, want %q", summary, "Whitespace trimmed")
+	}
+}
+
+func TestExtractSessionSummary_OnlyChecksTextContentBlocks(t *testing.T) {
+	t.Parallel()
+
+	messages := []Message{
+		{
+			Type: "assistant",
+			Message: MessageContent{
+				Content: []ContentBlock{
+					{Type: "tool_use", Text: "[SESSION: Tool session ignored]"},
+					{Type: "text", Text: "[SESSION: Text session found]"},
+					{Type: "image", Text: "[SESSION: Image session ignored]"},
+				},
+			},
+		},
+	}
+
+	summary := ExtractSessionSummary(messages)
+
+	if summary != "Text session found" {
+		t.Errorf("ExtractSessionSummary() = %q, want %q", summary, "Text session found")
+	}
+}

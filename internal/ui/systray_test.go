@@ -20,9 +20,6 @@ func TestNewSystray(t *testing.T) {
 	if len(s.alertIconData) == 0 {
 		t.Error("alertIconData should be initialized with embedded alert icon")
 	}
-	if s.quitCh == nil {
-		t.Error("quitCh should be initialized")
-	}
 }
 
 func TestNewSystray_UsesEmbeddedAssets(t *testing.T) {

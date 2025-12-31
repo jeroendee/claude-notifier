@@ -153,17 +153,15 @@ func TestNew(t *testing.T) {
 		{
 			name: "creates app with config",
 			config: &Config{
-				Port:       8080,
-				SoundFile:  "/path/to/sound.aiff",
-				MaxHistory: 100,
+				Port:      8080,
+				SoundFile: "/path/to/sound.aiff",
 			},
 		},
 		{
 			name: "creates app with default config values",
 			config: &Config{
-				Port:       19199,
-				SoundFile:  "/System/Library/Sounds/Glass.aiff",
-				MaxHistory: 50,
+				Port:      19199,
+				SoundFile: "/System/Library/Sounds/Glass.aiff",
 			},
 		},
 	}
@@ -228,9 +226,8 @@ func TestApp_RunStartsComponents(t *testing.T) {
 	t.Parallel()
 
 	config := &Config{
-		Port:       8080,
-		SoundFile:  "/path/to/sound.aiff",
-		MaxHistory: 100,
+		Port:      8080,
+		SoundFile: "/path/to/sound.aiff",
 	}
 
 	store := &mockStore{}

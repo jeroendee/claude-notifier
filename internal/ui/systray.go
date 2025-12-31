@@ -12,7 +12,6 @@ type Systray struct {
 	alertIconData   []byte
 	currentIconData []byte
 	menu            *Menu
-	quitCh          chan struct{}
 }
 
 // NewSystray creates a new Systray with embedded icon assets.
@@ -20,7 +19,6 @@ func NewSystray() *Systray {
 	return &Systray{
 		iconData:      assets.Icon,
 		alertIconData: assets.IconAlert,
-		quitCh:        make(chan struct{}),
 	}
 }
 
@@ -64,5 +62,4 @@ func (s *Systray) onReady() {
 }
 
 func (s *Systray) onExit() {
-	close(s.quitCh)
 }

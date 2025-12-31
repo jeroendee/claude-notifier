@@ -161,3 +161,76 @@ func TestHandleSummarySubcommand_WithEmptyArgs(t *testing.T) {
 		t.Error("handleSummarySubcommand() handled = true, want false")
 	}
 }
+
+func TestHandleSummarySubcommand_WithSessionMarker(t *testing.T) {
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "test.jsonl")
+
+	// Transcript with SESSION marker - should prefer this over heading
+	content := `{"type":"assistant","message":{"content":[{"type":"text","text":"## Task Complete\n\nDone.\n\n[SESSION: Fixed parsing bug]"}]}}`
+	if err := os.WriteFile(transcriptPath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	var buf bytes.Buffer
+	handled, err := handleSummarySubcommand([]string{"summary", transcriptPath}, &buf)
+
+	if err != nil {
+		t.Errorf("handleSummarySubcommand() error = %v, want nil", err)
+	}
+	if !handled {
+		t.Error("handleSummarySubcommand() handled = false, want true")
+	}
+	if got := strings.TrimSpace(buf.String()); got != "Fixed parsing bug" {
+		t.Errorf("handleSummarySubcommand() output = %q, want %q", got, "Fixed parsing bug")
+	}
+}
+
+func TestHandleSummarySubcommand_FallsBackToHeadingWhenNoSessionMarker(t *testing.T) {
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "test.jsonl")
+
+	// Transcript without SESSION marker - should fall back to heading
+	content := `{"type":"assistant","message":{"content":[{"type":"text","text":"## Final Heading\n\nSome content here."}]}}`
+	if err := os.WriteFile(transcriptPath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	var buf bytes.Buffer
+	handled, err := handleSummarySubcommand([]string{"summary", transcriptPath}, &buf)
+
+	if err != nil {
+		t.Errorf("handleSummarySubcommand() error = %v, want nil", err)
+	}
+	if !handled {
+		t.Error("handleSummarySubcommand() handled = false, want true")
+	}
+	if got := strings.TrimSpace(buf.String()); got != "Final Heading" {
+		t.Errorf("handleSummarySubcommand() output = %q, want %q", got, "Final Heading")
+	}
+}
+
+func TestHandleSummarySubcommand_SessionMarkerTakesPriorityOverHeading(t *testing.T) {
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "test.jsonl")
+
+	// Both SESSION marker and heading present - SESSION should win
+	content := `{"type":"assistant","message":{"content":[{"type":"text","text":"## First Heading\n\nSome work done."}]}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"## Second Heading\n\nMore work.\n\n[SESSION: Session summary wins]"}]}}`
+	if err := os.WriteFile(transcriptPath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	var buf bytes.Buffer
+	handled, err := handleSummarySubcommand([]string{"summary", transcriptPath}, &buf)
+
+	if err != nil {
+		t.Errorf("handleSummarySubcommand() error = %v, want nil", err)
+	}
+	if !handled {
+		t.Error("handleSummarySubcommand() handled = false, want true")
+	}
+	if got := strings.TrimSpace(buf.String()); got != "Session summary wins" {
+		t.Errorf("handleSummarySubcommand() output = %q, want %q", got, "Session summary wins")
+	}
+}

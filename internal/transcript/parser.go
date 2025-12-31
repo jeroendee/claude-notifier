@@ -12,6 +12,9 @@ import (
 // headingRegex matches markdown headings (## through ######).
 var headingRegex = regexp.MustCompile(`^#{2,6}\s+(.+)$`)
 
+// sessionRegex matches [SESSION: ...] markers.
+var sessionRegex = regexp.MustCompile(`\[SESSION:\s*(.+?)\]`)
+
 // ParseTranscript reads a JSONL transcript file and returns all messages.
 func ParseTranscript(path string) ([]Message, error) {
 	file, err := os.Open(path)
@@ -77,4 +80,35 @@ func ExtractLastHeading(messages []Message) string {
 	}
 
 	return lastHeading
+}
+
+// ExtractSessionSummary scans assistant messages in reverse order for
+// [SESSION: ...] markers and returns the last one found.
+func ExtractSessionSummary(messages []Message) string {
+	// Iterate in reverse to find the last SESSION marker
+	for i := len(messages) - 1; i >= 0; i-- {
+		msg := messages[i]
+
+		// Only process assistant messages
+		if msg.Type != "assistant" {
+			continue
+		}
+
+		// Check content blocks in reverse order within the message
+		for j := len(msg.Message.Content) - 1; j >= 0; j-- {
+			block := msg.Message.Content[j]
+
+			// Only process text content blocks
+			if block.Type != "text" {
+				continue
+			}
+
+			matches := sessionRegex.FindStringSubmatch(block.Text)
+			if len(matches) >= 2 {
+				return strings.TrimSpace(matches[1])
+			}
+		}
+	}
+
+	return ""
 }

@@ -50,9 +50,14 @@ func handleSummarySubcommand(args []string, w io.Writer) (bool, error) {
 		return true, fmt.Errorf("summary: %w", err)
 	}
 
-	heading := transcript.ExtractLastHeading(messages)
-	if heading != "" {
-		fmt.Fprintln(w, heading)
+	// Try SESSION marker first, fall back to last heading
+	summary := transcript.ExtractSessionSummary(messages)
+	if summary == "" {
+		summary = transcript.ExtractLastHeading(messages)
+	}
+
+	if summary != "" {
+		fmt.Fprintln(w, summary)
 	}
 
 	return true, nil
