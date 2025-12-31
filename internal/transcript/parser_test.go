@@ -426,3 +426,148 @@ func TestExtractLastHeading_HandlesMessagesWithEmptyContent(t *testing.T) {
 		t.Errorf("ExtractLastHeading() = %q, want empty string", heading)
 	}
 }
+
+func TestParseTranscript_ParsesStringContent(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "string_content.jsonl")
+
+	// User messages have content as a string, not an array
+	content := `{"type":"user","message":{"content":"Help me with this task"}}`
+
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	messages, err := ParseTranscript(filePath)
+
+	if err != nil {
+		t.Errorf("ParseTranscript() unexpected error: %v", err)
+	}
+
+	if len(messages) != 1 {
+		t.Fatalf("ParseTranscript() messages = %d, want 1", len(messages))
+	}
+
+	if messages[0].Type != "user" {
+		t.Errorf("ParseTranscript() message type = %q, want %q", messages[0].Type, "user")
+	}
+
+	if len(messages[0].Message.Content) != 1 {
+		t.Fatalf("ParseTranscript() content blocks = %d, want 1", len(messages[0].Message.Content))
+	}
+
+	if messages[0].Message.Content[0].Type != "text" {
+		t.Errorf("ParseTranscript() content type = %q, want %q", messages[0].Message.Content[0].Type, "text")
+	}
+
+	if messages[0].Message.Content[0].Text != "Help me with this task" {
+		t.Errorf("ParseTranscript() content text = %q, want %q", messages[0].Message.Content[0].Text, "Help me with this task")
+	}
+}
+
+func TestParseTranscript_ParsesMixedStringAndArrayContent(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "mixed_content.jsonl")
+
+	// Real-world transcript format: user messages have string content, assistant messages have array content
+	content := `{"type":"user","message":{"content":"Help me with this task"}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"Sure, I can help you."}]}}
+{"type":"user","message":{"content":"Thanks!"}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"## Summary\n\nTask completed."}]}}`
+
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	messages, err := ParseTranscript(filePath)
+
+	if err != nil {
+		t.Errorf("ParseTranscript() unexpected error: %v", err)
+	}
+
+	if len(messages) != 4 {
+		t.Fatalf("ParseTranscript() messages = %d, want 4", len(messages))
+	}
+
+	// Verify user message (string content)
+	if messages[0].Message.Content[0].Text != "Help me with this task" {
+		t.Errorf("ParseTranscript() user content = %q, want %q", messages[0].Message.Content[0].Text, "Help me with this task")
+	}
+
+	// Verify assistant message (array content)
+	if messages[1].Message.Content[0].Text != "Sure, I can help you." {
+		t.Errorf("ParseTranscript() assistant content = %q, want %q", messages[1].Message.Content[0].Text, "Sure, I can help you.")
+	}
+
+	// Verify heading extraction still works
+	heading := ExtractLastHeading(messages)
+	if heading != "Summary" {
+		t.Errorf("ExtractLastHeading() = %q, want %q", heading, "Summary")
+	}
+}
+
+func TestParseTranscript_ParsesEmptyStringContent(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "empty_string.jsonl")
+
+	content := `{"type":"user","message":{"content":""}}`
+
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	messages, err := ParseTranscript(filePath)
+
+	if err != nil {
+		t.Errorf("ParseTranscript() unexpected error: %v", err)
+	}
+
+	if len(messages) != 1 {
+		t.Fatalf("ParseTranscript() messages = %d, want 1", len(messages))
+	}
+
+	if len(messages[0].Message.Content) != 1 {
+		t.Fatalf("ParseTranscript() content blocks = %d, want 1", len(messages[0].Message.Content))
+	}
+
+	if messages[0].Message.Content[0].Text != "" {
+		t.Errorf("ParseTranscript() content text = %q, want empty string", messages[0].Message.Content[0].Text)
+	}
+}
+
+func TestParseTranscript_ParsesWhitespaceOnlyContent(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "whitespace.jsonl")
+
+	content := `{"type":"user","message":{"content":"   "}}`
+
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	messages, err := ParseTranscript(filePath)
+
+	if err != nil {
+		t.Errorf("ParseTranscript() unexpected error: %v", err)
+	}
+
+	if len(messages) != 1 {
+		t.Fatalf("ParseTranscript() messages = %d, want 1", len(messages))
+	}
+
+	if len(messages[0].Message.Content) != 1 {
+		t.Fatalf("ParseTranscript() content blocks = %d, want 1", len(messages[0].Message.Content))
+	}
+
+	if messages[0].Message.Content[0].Text != "   " {
+		t.Errorf("ParseTranscript() content text = %q, want %q", messages[0].Message.Content[0].Text, "   ")
+	}
+}
