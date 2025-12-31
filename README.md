@@ -116,7 +116,38 @@ This outputs the last session marker found in assistant messages. The hook scrip
 - Scans assistant messages for `[SESSION: ...]` markers
 - Returns the last marker found (e.g., `[SESSION: Fixed bug in parser]` → `Fixed bug in parser`)
 
-This marker-based approach provides instant extraction without API calls. Claude is instructed via CLAUDE.md to include a `[SESSION: ...]` summary line at the end of each task completion.
+This marker-based approach provides instant extraction without API calls.
+
+### Required: CLAUDE.md Configuration
+
+For session summaries to work, Claude must be instructed to include `[SESSION: ...]` markers. Add this to your `~/.claude/CLAUDE.md` (or project-level CLAUDE.md):
+
+```markdown
+### Session Summary Protocol
+
+**At the end of every task completion response**, include a summary line:
+
+[SESSION: <5-7 word description of what was accomplished>]
+
+**Subagent Delegation Rule:**
+When work is delegated to subagents (via Task tool), the **main agent** is still
+responsible for the session summary. Subagent responses are internal - the user only
+sees the main agent's final response. The session summary must reflect the
+completed work regardless of whether it was done directly or delegated.
+
+**Format rules:**
+- Exactly one `[SESSION: ...]` line per completion
+- 5-7 words maximum
+- Describes the outcome, not the process
+- No special characters except hyphens
+
+**Examples:**
+- `[SESSION: Fixed transcript parser string handling]`
+- `[SESSION: Added user authentication endpoint]`
+- `[SESSION: Refactored database connection pool]`
+```
+
+Without this configuration, notifications will show the project name only.
 
 ## HTTP API
 
