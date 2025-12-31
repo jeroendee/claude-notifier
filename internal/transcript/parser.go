@@ -15,6 +15,9 @@ var headingRegex = regexp.MustCompile(`^#{2,6}\s+(.+)$`)
 // sessionRegex matches [SESSION: ...] markers.
 var sessionRegex = regexp.MustCompile(`\[SESSION:\s*(.+?)\]`)
 
+// maxScanBufferSize is 1MB, enough for large JSONL lines with base64 images.
+const maxScanBufferSize = 1024 * 1024
+
 // ParseTranscript reads a JSONL transcript file and returns all messages.
 func ParseTranscript(path string) ([]Message, error) {
 	file, err := os.Open(path)
@@ -25,6 +28,7 @@ func ParseTranscript(path string) ([]Message, error) {
 
 	var messages []Message
 	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, maxScanBufferSize), maxScanBufferSize)
 	lineNum := 0
 
 	for scanner.Scan() {

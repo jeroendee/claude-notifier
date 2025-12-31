@@ -756,3 +756,38 @@ func TestExtractSessionSummary_ReturnsLastSessionMarkerFromSameTextBlock(t *test
 		t.Errorf("ExtractSessionSummary() = %q, want %q", summary, "Final summary")
 	}
 }
+
+func TestParseTranscript_HandlesLargeLines(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "large_lines.jsonl")
+
+	// Create content larger than default 64KB buffer
+	largeText := make([]byte, 100000)
+	for i := range largeText {
+		largeText[i] = 'x'
+	}
+
+	// JSON with large text content
+	content := `{"type":"assistant","message":{"content":[{"type":"text","text":"` + string(largeText) + `"},{"type":"text","text":"[SESSION: Large file parsed]"}]}}`
+
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	messages, err := ParseTranscript(filePath)
+
+	if err != nil {
+		t.Errorf("ParseTranscript() unexpected error: %v", err)
+	}
+
+	if len(messages) != 1 {
+		t.Fatalf("ParseTranscript() messages = %d, want 1", len(messages))
+	}
+
+	summary := ExtractSessionSummary(messages)
+	if summary != "Large file parsed" {
+		t.Errorf("ExtractSessionSummary() = %q, want %q", summary, "Large file parsed")
+	}
+}
