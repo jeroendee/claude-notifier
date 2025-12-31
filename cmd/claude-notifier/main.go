@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -9,11 +10,19 @@ import (
 	"github.com/jeroendee/claude-notifier/internal/app"
 	"github.com/jeroendee/claude-notifier/internal/notification"
 	"github.com/jeroendee/claude-notifier/internal/server"
+	"github.com/jeroendee/claude-notifier/internal/transcript"
 	"github.com/jeroendee/claude-notifier/internal/ui"
 	"github.com/jeroendee/claude-notifier/internal/version"
 )
 
 func main() {
+	if handled, err := handleSummarySubcommand(os.Args[1:], os.Stdout); handled {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if handleVersionFlag(os.Stdout) {
 		return
 	}
@@ -21,6 +30,32 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// handleSummarySubcommand handles the 'summary' subcommand.
+// Returns (true, nil) if handled successfully, (true, error) if handled with error,
+// or (false, nil) if args don't contain the summary subcommand.
+func handleSummarySubcommand(args []string, w io.Writer) (bool, error) {
+	if len(args) == 0 || args[0] != "summary" {
+		return false, nil
+	}
+
+	if len(args) < 2 {
+		return true, errors.New("summary: missing transcript path argument")
+	}
+
+	path := args[1]
+	messages, err := transcript.ParseTranscript(path)
+	if err != nil {
+		return true, fmt.Errorf("summary: %w", err)
+	}
+
+	heading := transcript.ExtractLastHeading(messages)
+	if heading != "" {
+		fmt.Fprintln(w, heading)
+	}
+
+	return true, nil
 }
 
 // handleVersionFlag parses --version/-v flags and prints version info if set.

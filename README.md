@@ -101,6 +101,23 @@ Add to `~/.claude/settings.json`:
 
 Now Claude Code will notify you when tasks complete.
 
+## Summary Command
+
+The `summary` subcommand extracts the last markdown heading from a Claude Code transcript file:
+
+```bash
+claude-notifier summary /path/to/transcript.jsonl
+```
+
+This outputs the last heading (## through ######) found in assistant messages. The hook script uses this to add context to notifications.
+
+**How it works:**
+- Parses the JSONL transcript file
+- Scans assistant messages for markdown headings
+- Returns the last heading found (without the `#` prefix)
+
+This heading-based approach replaces the previous Haiku-generated summaries, providing instant extraction without API calls.
+
 ## HTTP API
 
 ### Send Notification
@@ -185,6 +202,7 @@ Returns `204 No Content`.
 | Server | `internal/server` | HTTP API endpoints |
 | Store | `internal/notification` | Notification storage, read/unread tracking |
 | Sound | `internal/notification` | Play audio alerts via `afplay` |
+| Transcript | `internal/transcript` | Parse JSONL transcripts, extract headings |
 | UI | `internal/ui` | macOS menu bar integration via systray |
 | Assets | `internal/assets` | Embedded icons (normal and alert states) |
 | Scripts | `internal/scripts` | Embedded hook script and LaunchAgent plist |
@@ -215,13 +233,17 @@ Requires `golangci-lint` to be installed.
 
 ```
 claude-notifier/
-├── cmd/claude-notifier/  # Main entry point
+├── cmd/
+│   ├── claude-notifier/     # Main entry point
+│   ├── install-hook/        # Hook script installer
+│   └── install-launchagent/ # LaunchAgent installer
 ├── internal/
 │   ├── app/           # App orchestration and config
 │   ├── assets/        # Embedded icons (go:embed)
 │   ├── notification/  # Store and sound player
 │   ├── scripts/       # Embedded hook script and plist (go:embed)
 │   ├── server/        # HTTP server
+│   ├── transcript/    # JSONL transcript parser for summaries
 │   ├── ui/            # macOS menu bar (systray)
 │   └── version/       # Version info (injected via ldflags)
 └── Makefile
