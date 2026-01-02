@@ -104,6 +104,68 @@ func TestWriteHookScript_ReturnsErrorOnWriteFileFailure(t *testing.T) {
 	}
 }
 
+func TestWriteNotificationHookScript_CreatesFileWithCorrectContent(t *testing.T) {
+	t.Parallel()
+
+	destDir := t.TempDir()
+
+	path, err := WriteNotificationHookScript(destDir)
+	if err != nil {
+		t.Fatalf("WriteNotificationHookScript() error = %v", err)
+	}
+
+	wantPath := filepath.Join(destDir, "notification-hook.sh")
+	if path != wantPath {
+		t.Errorf("WriteNotificationHookScript() path = %v, want %v", path, wantPath)
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read written file: %v", err)
+	}
+
+	if string(content) != string(NotificationHookScript) {
+		t.Errorf("WriteNotificationHookScript() content mismatch")
+	}
+}
+
+func TestWriteNotificationHookScript_SetsExecutablePermissions(t *testing.T) {
+	t.Parallel()
+
+	destDir := t.TempDir()
+
+	path, err := WriteNotificationHookScript(destDir)
+	if err != nil {
+		t.Fatalf("WriteNotificationHookScript() error = %v", err)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("failed to stat file: %v", err)
+	}
+
+	wantMode := os.FileMode(0755)
+	if info.Mode().Perm() != wantMode {
+		t.Errorf("WriteNotificationHookScript() file mode = %v, want %v", info.Mode().Perm(), wantMode)
+	}
+}
+
+func TestWriteNotificationHookScript_CreatesParentDirectories(t *testing.T) {
+	t.Parallel()
+
+	baseDir := t.TempDir()
+	destDir := filepath.Join(baseDir, "nested", "dirs")
+
+	path, err := WriteNotificationHookScript(destDir)
+	if err != nil {
+		t.Fatalf("WriteNotificationHookScript() error = %v", err)
+	}
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Errorf("WriteNotificationHookScript() file does not exist at %v", path)
+	}
+}
+
 func TestWritePlist_CreatesFileWithCorrectContent(t *testing.T) {
 	t.Parallel()
 

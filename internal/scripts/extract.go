@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	hookScriptFilename = "claude-hook.sh"
-	plistFilename      = "com.dee.claude-notifier.plist"
-	binaryPathMarker   = "__BINARY_PATH__"
+	hookScriptFilename         = "claude-hook.sh"
+	notificationHookFilename   = "notification-hook.sh"
+	plistFilename              = "com.dee.claude-notifier.plist"
+	binaryPathMarker           = "__BINARY_PATH__"
 )
 
 // WriteHookScript writes claude-hook.sh to destDir with executable permissions (0755).
@@ -25,6 +26,23 @@ func WriteHookScript(destDir string) (string, error) {
 
 	if err := os.WriteFile(destPath, HookScript, 0755); err != nil {
 		return "", fmt.Errorf("write hook script: %w", err)
+	}
+
+	return destPath, nil
+}
+
+// WriteNotificationHookScript writes notification-hook.sh to destDir with executable permissions (0755).
+// It creates parent directories if they don't exist.
+// Returns the full path to the written file.
+func WriteNotificationHookScript(destDir string) (string, error) {
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return "", fmt.Errorf("create directory: %w", err)
+	}
+
+	destPath := filepath.Join(destDir, notificationHookFilename)
+
+	if err := os.WriteFile(destPath, NotificationHookScript, 0755); err != nil {
+		return "", fmt.Errorf("write notification hook script: %w", err)
 	}
 
 	return destPath, nil

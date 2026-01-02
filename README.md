@@ -69,13 +69,15 @@ CLAUDE_NOTIFIER_PORT=8080 CLAUDE_NOTIFIER_SOUND=/System/Library/Sounds/Ping.aiff
 
 ## Claude Code Integration
 
-### Install Hook Script
+### Install Hook Scripts
 
 ```bash
 make install-hook
 ```
 
-This installs a hook script to `~/.claude/hooks/claude-hook.sh`.
+This installs two hook scripts to `~/.claude/hooks/`:
+- `claude-hook.sh` - For Stop events (task completions with SESSION summaries)
+- `notification-hook.sh` - For idle prompts and permission requests
 
 ### Configure Claude Code
 
@@ -84,22 +86,33 @@ Add to `~/.claude/settings.json`:
 ```json
 {
   "hooks": {
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claude-hook.sh"
-          }
-        ]
-      }
-    ]
+    "Stop": [{
+      "hooks": [{ "type": "command", "command": "~/.claude/hooks/claude-hook.sh" }]
+    }],
+    "Notification": [{
+      "matcher": "idle_prompt",
+      "hooks": [{ "type": "command", "command": "~/.claude/hooks/notification-hook.sh" }]
+    }],
+    "PermissionRequest": [{
+      "matcher": "",
+      "hooks": [{ "type": "command", "command": "~/.claude/hooks/notification-hook.sh" }]
+    }]
   }
 }
 ```
 
-Now Claude Code will notify you when tasks complete.
+### Hook Types
+
+| Hook | Trigger | Notification |
+|------|---------|--------------|
+| **Stop** | Claude finishes responding | `{time} {project} - {SESSION summary}` |
+| **Notification** (`idle_prompt`) | Claude waiting for input 60+ seconds | `{time} {project} - Waiting for input` |
+| **PermissionRequest** | Claude needs permission approval | `{time} {project} - Waiting for input` |
+
+Now Claude Code will notify you when:
+- Tasks complete (with context from SESSION markers)
+- Claude has been waiting for your input for 60+ seconds
+- Claude needs permission to proceed
 
 ## Summary Command
 

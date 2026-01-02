@@ -27,7 +27,13 @@ func run(destDir string) error {
 	if err != nil {
 		return err
 	}
-
 	fmt.Printf("Wrote hook script to: %s\n", path)
+
+	notifyPath, err := scripts.WriteNotificationHookScript(destDir)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Wrote notification hook script to: %s\n", notifyPath)
+
 	return nil
 }

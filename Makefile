@@ -64,27 +64,32 @@ uninstall-launchagent:
 	rm -f $(LAUNCHAGENT_DIR)/$(PLIST_NAME)
 	@echo "LaunchAgent uninstalled"
 
-# Install Claude Code hook script
+# Install Claude Code hook scripts
 install-hook:
-	@echo "Installing Claude Code hook script..."
+	@echo "Installing Claude Code hook scripts..."
 	@go run ./cmd/install-hook
 	@echo ""
-	@echo "To configure Claude Code to use this hook, add to ~/.claude/settings.json:"
+	@echo "To configure Claude Code to use these hooks, add to ~/.claude/settings.json:"
 	@echo '  {'
 	@echo '    "hooks": {'
-	@echo '      "Stop": ['
-	@echo '        {'
-	@echo '          "matcher": "",'
-	@echo '          "hooks": ['
-	@echo '            {'
-	@echo '              "type": "command",'
-	@echo '              "command": "~/.claude/hooks/claude-hook.sh"'
-	@echo '            }'
-	@echo '          ]'
-	@echo '        }'
-	@echo '      ]'
+	@echo '      "Stop": [{'
+	@echo '        "hooks": [{ "type": "command", "command": "~/.claude/hooks/claude-hook.sh" }]'
+	@echo '      }],'
+	@echo '      "Notification": [{'
+	@echo '        "matcher": "idle_prompt",'
+	@echo '        "hooks": [{ "type": "command", "command": "~/.claude/hooks/notification-hook.sh" }]'
+	@echo '      }],'
+	@echo '      "PermissionRequest": [{'
+	@echo '        "matcher": "",'
+	@echo '        "hooks": [{ "type": "command", "command": "~/.claude/hooks/notification-hook.sh" }]'
+	@echo '      }]'
 	@echo '    }'
 	@echo '  }'
+	@echo ""
+	@echo "Hook types:"
+	@echo "  - Stop: Notifies when Claude finishes responding (with SESSION summary)"
+	@echo "  - Notification (idle_prompt): Notifies after 60s waiting for user input"
+	@echo "  - PermissionRequest: Notifies when Claude needs permission approval"
 
 # Show help
 help:

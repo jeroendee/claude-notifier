@@ -1,2 +1,5 @@
 bin/claude-notifier
 /claude-notifier
+
+# bv (beads viewer) local config and caches
+.bv/
