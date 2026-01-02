@@ -16,7 +16,7 @@ LDFLAGS := -ldflags "-X github.com/jeroendee/claude-notifier/internal/version.Ve
 .DEFAULT_GOAL := build
 
 # Phony declarations
-.PHONY: all build test lint clean install uninstall install-launchagent uninstall-launchagent install-hook help
+.PHONY: all build test coverage lint clean install uninstall install-launchagent uninstall-launchagent install-hook help
 
 # Build the binary
 build:
@@ -26,6 +26,12 @@ build:
 # Run tests
 test:
 	go test -v ./...
+
+# Run tests with coverage report
+coverage:
+	go test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report: coverage.html"
 
 # Run linter (optional, if golangci-lint is available)
 lint:
@@ -37,7 +43,7 @@ lint:
 
 # Remove build artifacts
 clean:
-	rm -rf $(BUILD_DIR)/
+	rm -rf $(BUILD_DIR)/ coverage.out coverage.html
 
 # Install binary to GOPATH/bin (or GOBIN if set)
 install:
@@ -96,6 +102,7 @@ help:
 	@echo "Targets:"
 	@echo "  build      Build the binary to $(BUILD_DIR)/$(BINARY_NAME)"
 	@echo "  test       Run tests"
+	@echo "  coverage   Run tests with HTML coverage report"
 	@echo "  lint       Run linter (if golangci-lint is available)"
 	@echo "  clean      Remove $(BUILD_DIR)/ directory"
 	@echo "  install              Install binary to GOPATH/bin"
