@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -458,4 +459,23 @@ func TestStore_ConcurrentOperations(t *testing.T) {
 	if len(notifications) > 50 {
 		t.Errorf("Concurrent operations resulted in more than maxItems: %d", len(notifications))
 	}
+}
+
+// failingReader always returns an error.
+type failingReader struct{}
+
+func (failingReader) Read([]byte) (int, error) {
+	return 0, errors.New("crypto/rand unavailable")
+}
+
+func TestGenerateID_PanicsOnRandomReaderFailure(t *testing.T) {
+	t.Parallel()
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("generateID did not panic when random reader failed")
+		}
+	}()
+
+	generateID(failingReader{})
 }

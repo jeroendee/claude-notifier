@@ -1,3 +1,19 @@
+// Package ui provides the system tray user interface components.
+//
+// # Goroutine Lifecycle
+//
+// Menu spawns goroutines in Build() that range over systray MenuItem.ClickedCh
+// channels to handle click events. These goroutines are designed to run for the
+// lifetime of the application.
+//
+// The systray package (github.com/getlantern/systray) does not close ClickedCh
+// channels on Quit(). Instead, goroutine cleanup relies on process termination:
+// when systray.Quit() is called, the systray event loop exits, Run() returns,
+// and the process terminates, killing all goroutines.
+//
+// This is intentional behavior - adding explicit done channel cleanup would add
+// complexity for no practical benefit, since the process terminates immediately
+// after systray shutdown.
 package ui
 
 import (
@@ -50,14 +66,15 @@ func (m *Menu) Build() {
 
 	systray.AddSeparator()
 
-	// Pre-create notification item slots (hidden initially)
+	// Pre-create notification item slots (hidden initially).
+	// Each item gets a goroutine that handles clicks. These goroutines run
+	// until process termination (see package doc for lifecycle details).
 	for i := 0; i < maxNotificationItems; i++ {
 		item := systray.AddMenuItem("", "Click to mark as read")
 		item.Hide()
 		ni := &notificationItem{menuItem: item, id: ""}
 		m.notificationItems = append(m.notificationItems, ni)
 
-		// Click handler - uses closure to access the item's current ID
 		go func(ni *notificationItem) {
 			for range ni.menuItem.ClickedCh {
 				if ni.id != "" {
@@ -69,7 +86,7 @@ func (m *Menu) Build() {
 
 	systray.AddSeparator()
 
-	// Action items
+	// Action items. Goroutines run until process termination.
 	m.markAllRead = systray.AddMenuItem("Mark All Read", "Mark all notifications as read")
 	go func() {
 		for range m.markAllRead.ClickedCh {
@@ -90,6 +107,7 @@ func (m *Menu) Build() {
 	m.about = systray.AddMenuItem(fmt.Sprintf("Version (%s)", version.Get().Version), "")
 	m.about.Disable()
 
+	// Quit handler goroutine runs until process termination.
 	m.quit = systray.AddMenuItem("Quit", "Quit the application")
 	go func() {
 		for range m.quit.ClickedCh {

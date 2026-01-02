@@ -3,6 +3,7 @@ package notification
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"io"
 	"sync"
 	"time"
 )
@@ -60,7 +61,7 @@ func (s *Store) UnreadCount() int {
 func (s *Store) Add(message string) {
 	s.mu.Lock()
 	n := Notification{
-		ID:        generateID(),
+		ID:        generateID(rand.Reader),
 		Message:   message,
 		Timestamp: time.Now(),
 		Read:      false,
@@ -80,9 +81,11 @@ func (s *Store) Add(message string) {
 	}
 }
 
-func generateID() string {
+func generateID(r io.Reader) string {
 	b := make([]byte, 8)
-	rand.Read(b)
+	if _, err := io.ReadFull(r, b); err != nil {
+		panic("notification: failed to generate ID: " + err.Error())
+	}
 	return hex.EncodeToString(b)
 }
 

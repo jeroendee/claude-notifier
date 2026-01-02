@@ -7,9 +7,13 @@ import (
 	"net"
 	"net/http"
 	"time"
-
-	"github.com/jeroendee/claude-notifier/internal/notification"
 )
+
+// NotificationStore defines the interface for storing notifications.
+type NotificationStore interface {
+	Add(message string)
+	Clear()
+}
 
 // SoundPlayer defines the interface for playing notification sounds.
 type SoundPlayer interface {
@@ -24,14 +28,14 @@ type NotifyRequest struct {
 // Server handles HTTP requests for notifications.
 type Server struct {
 	port     int
-	store    *notification.Store
+	store    NotificationStore
 	player   SoundPlayer
 	server   *http.Server
 	listener net.Listener
 }
 
 // NewServer creates a new notification HTTP server.
-func NewServer(port int, store *notification.Store, player SoundPlayer) *Server {
+func NewServer(port int, store NotificationStore, player SoundPlayer) *Server {
 	return &Server{
 		port:   port,
 		store:  store,

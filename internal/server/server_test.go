@@ -21,6 +21,22 @@ func (m *mockSoundPlayer) Play() error {
 	return m.playErr
 }
 
+// mockNotificationStore implements NotificationStore for testing.
+type mockNotificationStore struct {
+	addCalled   bool
+	addMessage  string
+	clearCalled bool
+}
+
+func (m *mockNotificationStore) Add(message string) {
+	m.addCalled = true
+	m.addMessage = message
+}
+
+func (m *mockNotificationStore) Clear() {
+	m.clearCalled = true
+}
+
 func TestNewServer(t *testing.T) {
 	t.Parallel()
 
@@ -40,6 +56,22 @@ func TestNewServer(t *testing.T) {
 	}
 	if srv.player != player {
 		t.Error("player not set correctly")
+	}
+}
+
+func TestNewServerWithMockStore(t *testing.T) {
+	t.Parallel()
+
+	store := &mockNotificationStore{}
+	player := &mockSoundPlayer{}
+
+	srv := NewServer(8080, store, player)
+
+	if srv == nil {
+		t.Fatal("NewServer() returned nil")
+	}
+	if srv.port != 8080 {
+		t.Errorf("port = %d, want 8080", srv.port)
 	}
 }
 
