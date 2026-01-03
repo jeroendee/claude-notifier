@@ -89,6 +89,7 @@ func run() error {
 
 	tray := ui.NewSystray()
 	menu := ui.NewMenu(tray, store)
+	menu.SetPlayer(soundPlayer)
 	tray.SetMenu(menu)
 
 	application := app.New(cfg).

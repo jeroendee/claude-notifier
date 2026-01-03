@@ -135,3 +135,123 @@ func TestSoundPlayer_Play_ReturnsErrorOnStartFailure(t *testing.T) {
 		t.Error("Play() error = nil, want error for failed command start")
 	}
 }
+
+func TestSoundPlayer_IsMuted_DefaultFalse(t *testing.T) {
+	t.Parallel()
+
+	player := NewSoundPlayer("")
+
+	if player.IsMuted() {
+		t.Error("IsMuted() = true, want false for new player")
+	}
+}
+
+func TestSoundPlayer_SetMuted_True(t *testing.T) {
+	t.Parallel()
+
+	player := NewSoundPlayer("")
+
+	player.SetMuted(true)
+
+	if !player.IsMuted() {
+		t.Error("IsMuted() = false after SetMuted(true), want true")
+	}
+}
+
+func TestSoundPlayer_SetMuted_False(t *testing.T) {
+	t.Parallel()
+
+	player := NewSoundPlayer("")
+	player.SetMuted(true)
+
+	player.SetMuted(false)
+
+	if player.IsMuted() {
+		t.Error("IsMuted() = true after SetMuted(false), want false")
+	}
+}
+
+func TestSoundPlayer_Play_SkipsWhenMuted(t *testing.T) {
+	t.Parallel()
+
+	commandExecuted := false
+	player := NewSoundPlayer("")
+	player.execCommand = func(name string, args ...string) *exec.Cmd {
+		commandExecuted = true
+		return exec.Command("echo")
+	}
+
+	player.SetMuted(true)
+	err := player.Play()
+
+	if err != nil {
+		t.Errorf("Play() error = %v, want nil when muted", err)
+	}
+
+	if commandExecuted {
+		t.Error("Play() executed command when muted, want no execution")
+	}
+}
+
+func TestSoundPlayer_Play_ExecutesWhenNotMuted(t *testing.T) {
+	t.Parallel()
+
+	commandExecuted := false
+	player := NewSoundPlayer("")
+	player.execCommand = func(name string, args ...string) *exec.Cmd {
+		commandExecuted = true
+		return exec.Command("echo")
+	}
+
+	player.SetMuted(false)
+	err := player.Play()
+
+	if err != nil {
+		t.Errorf("Play() error = %v, want nil", err)
+	}
+
+	if !commandExecuted {
+		t.Error("Play() did not execute command when not muted, want execution")
+	}
+}
+
+func TestSoundPlayer_MuteState_ThreadSafe(t *testing.T) {
+	t.Parallel()
+
+	player := NewSoundPlayer("")
+	player.execCommand = func(name string, args ...string) *exec.Cmd {
+		return exec.Command("echo")
+	}
+
+	done := make(chan bool)
+	const goroutines = 100
+
+	// Concurrent writers
+	for i := 0; i < goroutines; i++ {
+		go func(mute bool) {
+			player.SetMuted(mute)
+			done <- true
+		}(i%2 == 0)
+	}
+
+	// Concurrent readers
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			_ = player.IsMuted()
+			done <- true
+		}()
+	}
+
+	// Concurrent Play calls
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			_ = player.Play()
+			done <- true
+		}()
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < goroutines*3; i++ {
+		<-done
+	}
+}

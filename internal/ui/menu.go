@@ -27,6 +27,12 @@ import (
 
 const maxNotificationItems = 20
 
+// Player abstracts sound playback control for dependency injection.
+type Player interface {
+	IsMuted() bool
+	SetMuted(bool)
+}
+
 // notificationItem holds a menu item and its associated notification ID.
 // Access to id is protected by mu for concurrent access from click handlers
 // and Refresh().
@@ -54,8 +60,10 @@ func (ni *notificationItem) SetID(id string) {
 type Menu struct {
 	systray           *Systray
 	store             *notification.Store
+	player            Player
 	header            *systray.MenuItem
 	notificationItems []*notificationItem
+	muteItem          *systray.MenuItem
 	markAllRead       *systray.MenuItem
 	clearHistory      *systray.MenuItem
 	about             *systray.MenuItem
@@ -70,6 +78,35 @@ func NewMenu(systray *Systray, store *notification.Store) *Menu {
 		store:             store,
 		notificationItems: make([]*notificationItem, 0, maxNotificationItems),
 	}
+}
+
+// SetPlayer sets the player for mute control.
+func (m *Menu) SetPlayer(p Player) {
+	m.player = p
+}
+
+// toggleMute flips the player's muted state.
+func (m *Menu) toggleMute() {
+	if m.player == nil {
+		return
+	}
+	m.player.SetMuted(!m.player.IsMuted())
+}
+
+// muteLabel returns the appropriate label based on player mute state.
+func muteLabel(p Player) string {
+	if p != nil && p.IsMuted() {
+		return "Unmute Sound"
+	}
+	return "Mute Sound"
+}
+
+// updateMuteLabel updates the mute menu item title based on player state.
+func (m *Menu) updateMuteLabel() {
+	if m.muteItem == nil {
+		return
+	}
+	m.muteItem.SetTitle(muteLabel(m.player))
 }
 
 // Build constructs the system tray menu. Called once during initialization.
@@ -116,6 +153,15 @@ func (m *Menu) Build() {
 	go func() {
 		for range m.clearHistory.ClickedCh {
 			m.store.Clear()
+		}
+	}()
+
+	// Mute sound toggle. Goroutine runs until process termination.
+	m.muteItem = systray.AddMenuItem(muteLabel(m.player), "Toggle notification sound")
+	go func() {
+		for range m.muteItem.ClickedCh {
+			m.toggleMute()
+			m.updateMuteLabel()
 		}
 	}()
 
