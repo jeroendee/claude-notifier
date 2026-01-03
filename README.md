@@ -307,6 +307,7 @@ When you click the icon, you see:
   - `○` = read
 - **Mark All Read** - Marks all notifications as read
 - **Clear History** - Removes all notifications
+- **Mute Sound** - Toggle notification sounds on/off (label changes to "Unmute Sound" when muted)
 - **About** - Shows version (e.g., "claude-notifier v1.0.0")
 - **Quit** - Stops the claude-notifier
 
