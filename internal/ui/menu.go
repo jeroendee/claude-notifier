@@ -18,6 +18,7 @@ package ui
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/getlantern/systray"
 	"github.com/jeroendee/claude-notifier/internal/notification"
@@ -27,9 +28,26 @@ import (
 const maxNotificationItems = 20
 
 // notificationItem holds a menu item and its associated notification ID.
+// Access to id is protected by mu for concurrent access from click handlers
+// and Refresh().
 type notificationItem struct {
 	menuItem *systray.MenuItem
+	mu       sync.RWMutex
 	id       string
+}
+
+// GetID returns the notification ID safely for concurrent access.
+func (ni *notificationItem) GetID() string {
+	ni.mu.RLock()
+	defer ni.mu.RUnlock()
+	return ni.id
+}
+
+// SetID updates the notification ID safely for concurrent access.
+func (ni *notificationItem) SetID(id string) {
+	ni.mu.Lock()
+	defer ni.mu.Unlock()
+	ni.id = id
 }
 
 // Menu manages the system tray menu showing notification history.
@@ -77,8 +95,8 @@ func (m *Menu) Build() {
 
 		go func(ni *notificationItem) {
 			for range ni.menuItem.ClickedCh {
-				if ni.id != "" {
-					m.store.MarkRead(ni.id)
+				if id := ni.GetID(); id != "" {
+					m.store.MarkRead(id)
 				}
 			}
 		}(ni)
@@ -147,7 +165,7 @@ func (m *Menu) Refresh() {
 		label := fmt.Sprintf("%s %s", indicator, n.Message)
 
 		ni := m.notificationItems[itemIndex]
-		ni.id = n.ID
+		ni.SetID(n.ID)
 		ni.menuItem.SetTitle(label)
 		ni.menuItem.Show()
 		itemIndex++
@@ -156,7 +174,7 @@ func (m *Menu) Refresh() {
 	// Hide unused notification items
 	for ; itemIndex < maxNotificationItems; itemIndex++ {
 		ni := m.notificationItems[itemIndex]
-		ni.id = ""
+		ni.SetID("")
 		ni.menuItem.Hide()
 	}
 }

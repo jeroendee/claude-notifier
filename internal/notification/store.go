@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -81,11 +82,32 @@ func (s *Store) Add(message string) {
 	}
 }
 
+// idCounter provides uniqueness for time-based fallback IDs
+var idCounter uint32
+
 func generateID(r io.Reader) string {
 	b := make([]byte, 8)
 	if _, err := io.ReadFull(r, b); err != nil {
-		panic("notification: failed to generate ID: " + err.Error())
+		// Fallback to time-based ID when crypto/rand fails
+		return generateFallbackID()
 	}
+	return hex.EncodeToString(b)
+}
+
+// generateFallbackID creates a unique ID using time and atomic counter.
+func generateFallbackID() string {
+	nano := time.Now().UnixNano()
+	count := atomic.AddUint32(&idCounter, 1)
+	// Combine timestamp (6 bytes) + counter (2 bytes) = 8 bytes = 16 hex chars
+	b := make([]byte, 8)
+	b[0] = byte(nano >> 40)
+	b[1] = byte(nano >> 32)
+	b[2] = byte(nano >> 24)
+	b[3] = byte(nano >> 16)
+	b[4] = byte(nano >> 8)
+	b[5] = byte(nano)
+	b[6] = byte(count >> 8)
+	b[7] = byte(count)
 	return hex.EncodeToString(b)
 }
 

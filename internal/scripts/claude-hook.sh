@@ -33,8 +33,10 @@ else
 fi
 
 # Send notification (fail-safe)
+# Use jq to safely escape JSON to prevent injection from special chars in paths/summaries
+JSON_PAYLOAD=$(jq -n --arg msg "$MESSAGE" '{message: $msg}')
 curl -s -X POST http://localhost:19199/notify \
     -H "Content-Type: application/json" \
-    -d '{"message": "'"$MESSAGE"'"}' \
+    -d "$JSON_PAYLOAD" \
     --connect-timeout 1 \
     || true

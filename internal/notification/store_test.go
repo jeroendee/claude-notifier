@@ -1,6 +1,8 @@
 package notification
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
@@ -468,14 +470,50 @@ func (failingReader) Read([]byte) (int, error) {
 	return 0, errors.New("crypto/rand unavailable")
 }
 
-func TestGenerateID_PanicsOnRandomReaderFailure(t *testing.T) {
+func TestGenerateID_ReturnsValidIDOnSuccess(t *testing.T) {
 	t.Parallel()
 
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("generateID did not panic when random reader failed")
-		}
-	}()
+	id := generateID(rand.Reader)
 
-	generateID(failingReader{})
+	if len(id) != 16 {
+		t.Errorf("generateID() length = %d, want 16 hex chars", len(id))
+	}
+
+	// Verify it's valid hex
+	if _, err := hex.DecodeString(id); err != nil {
+		t.Errorf("generateID() returned invalid hex: %v", err)
+	}
+}
+
+func TestGenerateID_ReturnsFallbackIDOnReaderFailure(t *testing.T) {
+	t.Parallel()
+
+	// Should NOT panic, should return fallback ID
+	id := generateID(failingReader{})
+
+	if id == "" {
+		t.Error("generateID() returned empty string on reader failure")
+	}
+
+	if len(id) != 16 {
+		t.Errorf("generateID() fallback length = %d, want 16 hex chars", len(id))
+	}
+
+	// Verify it's valid hex
+	if _, err := hex.DecodeString(id); err != nil {
+		t.Errorf("generateID() fallback returned invalid hex: %v", err)
+	}
+}
+
+func TestGenerateID_FallbackIDsAreUnique(t *testing.T) {
+	t.Parallel()
+
+	ids := make(map[string]bool)
+	for i := 0; i < 100; i++ {
+		id := generateID(failingReader{})
+		if ids[id] {
+			t.Errorf("generateID() produced duplicate fallback ID: %s", id)
+		}
+		ids[id] = true
+	}
 }

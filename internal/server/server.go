@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"time"
@@ -30,16 +31,22 @@ type Server struct {
 	port     int
 	store    NotificationStore
 	player   SoundPlayer
+	logger   *log.Logger
 	server   *http.Server
 	listener net.Listener
 }
 
 // NewServer creates a new notification HTTP server.
-func NewServer(port int, store NotificationStore, player SoundPlayer) *Server {
+// If logger is nil, a default logger writing to stderr is used.
+func NewServer(port int, store NotificationStore, player SoundPlayer, logger *log.Logger) *Server {
+	if logger == nil {
+		logger = log.Default()
+	}
 	return &Server{
 		port:   port,
 		store:  store,
 		player: player,
+		logger: logger,
 	}
 }
 
@@ -100,7 +107,9 @@ func (s *Server) handleNotify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.store.Add(req.Message)
-	s.player.Play()
+	if err := s.player.Play(); err != nil {
+		s.logger.Printf("sound player error: %v", err)
+	}
 
 	w.WriteHeader(http.StatusCreated)
 }

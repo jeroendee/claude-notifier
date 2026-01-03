@@ -78,11 +78,14 @@ func handleVersionFlag(w io.Writer) bool {
 }
 
 func run() error {
-	cfg := app.LoadConfig()
+	cfg, err := app.LoadConfigWithValidation()
+	if err != nil {
+		return fmt.Errorf("config: %w", err)
+	}
 
 	store := notification.NewStore()
 	soundPlayer := notification.NewSoundPlayer(cfg.SoundFile)
-	srv := server.NewServer(cfg.Port, store, soundPlayer)
+	srv := server.NewServer(cfg.Port, store, soundPlayer, nil)
 
 	tray := ui.NewSystray()
 	menu := ui.NewMenu(tray, store)

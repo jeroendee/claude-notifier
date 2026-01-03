@@ -3,8 +3,11 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/jeroendee/claude-notifier/internal/notification"
@@ -43,7 +46,7 @@ func TestNewServer(t *testing.T) {
 	store := notification.NewStore()
 	player := &mockSoundPlayer{}
 
-	srv := NewServer(8080, store, player)
+	srv := NewServer(8080, store, player, nil)
 
 	if srv == nil {
 		t.Fatal("NewServer() returned nil")
@@ -65,7 +68,7 @@ func TestNewServerWithMockStore(t *testing.T) {
 	store := &mockNotificationStore{}
 	player := &mockSoundPlayer{}
 
-	srv := NewServer(8080, store, player)
+	srv := NewServer(8080, store, player, nil)
 
 	if srv == nil {
 		t.Fatal("NewServer() returned nil")
@@ -140,7 +143,7 @@ func TestNotifyHandler(t *testing.T) {
 
 			store := notification.NewStore()
 			player := &mockSoundPlayer{}
-			srv := NewServer(8080, store, player)
+			srv := NewServer(8080, store, player, nil)
 
 			req := httptest.NewRequest(tt.method, "/notify", bytes.NewBufferString(tt.body))
 			req.Header.Set("Content-Type", "application/json")
@@ -194,7 +197,7 @@ func TestHealthHandler(t *testing.T) {
 
 			store := notification.NewStore()
 			player := &mockSoundPlayer{}
-			srv := NewServer(8080, store, player)
+			srv := NewServer(8080, store, player, nil)
 
 			req := httptest.NewRequest(tt.method, "/health", nil)
 			rec := httptest.NewRecorder()
@@ -245,7 +248,7 @@ func TestClearHandler(t *testing.T) {
 
 			store := notification.NewStore()
 			player := &mockSoundPlayer{}
-			srv := NewServer(8080, store, player)
+			srv := NewServer(8080, store, player, nil)
 
 			// Add a notification first
 			store.Add("test notification")
@@ -278,7 +281,7 @@ func TestServerStartStop(t *testing.T) {
 
 	store := notification.NewStore()
 	player := &mockSoundPlayer{}
-	srv := NewServer(0, store, player) // port 0 = auto-assign
+	srv := NewServer(0, store, player, nil) // port 0 = auto-assign
 
 	if err := srv.Start(); err != nil {
 		t.Fatalf("Start() error = %v", err)
@@ -339,7 +342,7 @@ func TestServerRouting(t *testing.T) {
 			// Not parallel - uses shared store
 			store := notification.NewStore()
 			player := &mockSoundPlayer{}
-			srv := NewServer(8080, store, player)
+			srv := NewServer(8080, store, player, nil)
 
 			req := httptest.NewRequest(tt.method, tt.path, bytes.NewBufferString(tt.body))
 			if tt.body != "" {
@@ -351,6 +354,71 @@ func TestServerRouting(t *testing.T) {
 
 			if rec.Code != tt.wantStatus {
 				t.Errorf("status = %d, want %d", rec.Code, tt.wantStatus)
+			}
+		})
+	}
+}
+
+func TestNotifyHandler_LogsSoundPlayerErrors(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		playErr     error
+		wantLogged  bool
+		wantContain string
+	}{
+		{
+			name:        "logs error when Play fails",
+			playErr:     errors.New("sound file not found"),
+			wantLogged:  true,
+			wantContain: "sound file not found",
+		},
+		{
+			name:       "no error logged when Play succeeds",
+			playErr:    nil,
+			wantLogged: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			store := notification.NewStore()
+			player := &mockSoundPlayer{playErr: tt.playErr}
+
+			// Capture log output
+			var logBuf strings.Builder
+			logger := log.New(&logBuf, "", 0)
+
+			srv := NewServer(8080, store, player, logger)
+
+			req := httptest.NewRequest(http.MethodPost, "/notify", bytes.NewBufferString(`{"message": "test"}`))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+
+			srv.handleNotify(rec, req)
+
+			// Notification should still succeed even if sound fails
+			if rec.Code != http.StatusCreated {
+				t.Errorf("status = %d, want %d", rec.Code, http.StatusCreated)
+			}
+
+			// Verify notification was stored
+			if len(store.List()) != 1 {
+				t.Errorf("store count = %d, want 1", len(store.List()))
+			}
+
+			logOutput := logBuf.String()
+			if tt.wantLogged {
+				if !strings.Contains(logOutput, tt.wantContain) {
+					t.Errorf("log output = %q, want to contain %q", logOutput, tt.wantContain)
+				}
+			} else {
+				if logOutput != "" {
+					t.Errorf("log output = %q, want empty", logOutput)
+				}
 			}
 		})
 	}
