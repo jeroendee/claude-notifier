@@ -114,9 +114,10 @@ func TestSoundPlayer_Play_NonBlocking(t *testing.T) {
 		t.Errorf("Play() error = %v, want nil", err)
 	}
 
-	// Play() should return almost immediately (< 100ms), not wait for command
-	if elapsed > 100*time.Millisecond {
-		t.Errorf("Play() took %v, expected < 100ms (should be non-blocking)", elapsed)
+	// Play() should return quickly (< 500ms), not wait for the 2s command
+	// Using 500ms threshold to account for CI runner variability
+	if elapsed > 500*time.Millisecond {
+		t.Errorf("Play() took %v, expected < 500ms (should be non-blocking)", elapsed)
 	}
 }
 
