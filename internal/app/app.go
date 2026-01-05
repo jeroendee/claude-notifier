@@ -1,6 +1,7 @@
 package app
 
 import (
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -107,7 +108,9 @@ func (a *App) setupOnChange() {
 // Shutdown gracefully stops all components.
 func (a *App) Shutdown() {
 	if a.server != nil {
-		a.server.Stop()
+		if err := a.server.Stop(); err != nil {
+			log.Printf("server stop error: %v", err)
+		}
 	}
 }
 

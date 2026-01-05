@@ -65,7 +65,11 @@ func (s *Server) Start() error {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	go s.server.Serve(listener)
+	go func() {
+		if err := s.server.Serve(listener); err != nil && err != http.ErrServerClosed {
+			s.logger.Printf("server serve error: %v", err)
+		}
+	}()
 	return nil
 }
 
@@ -122,7 +126,9 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
+		s.logger.Printf("health response encode error: %v", err)
+	}
 }
 
 // handleClear processes POST /clear requests.

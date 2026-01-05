@@ -209,8 +209,12 @@ func TestHealthHandler(t *testing.T) {
 			}
 			if tt.wantBody != "" {
 				var got, want map[string]string
-				json.Unmarshal(rec.Body.Bytes(), &got)
-				json.Unmarshal([]byte(tt.wantBody), &want)
+				if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+					t.Fatalf("failed to unmarshal response body: %v", err)
+				}
+				if err := json.Unmarshal([]byte(tt.wantBody), &want); err != nil {
+					t.Fatalf("failed to unmarshal expected body: %v", err)
+				}
 				if got["status"] != want["status"] {
 					t.Errorf("body status = %q, want %q", got["status"], want["status"])
 				}

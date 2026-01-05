@@ -21,12 +21,6 @@ func (m *mockStore) UnreadCount() int {
 	return m.unreadCount
 }
 
-type mockSoundPlayer struct{}
-
-func (m *mockSoundPlayer) Play() error {
-	return nil
-}
-
 type mockServer struct {
 	mu       sync.Mutex
 	started  bool
@@ -244,7 +238,7 @@ func TestApp_RunStartsComponents(t *testing.T) {
 	// Run in goroutine since systray.Run() blocks
 	done := make(chan struct{})
 	go func() {
-		app.Run()
+		_ = app.Run()
 		close(done)
 	}()
 
@@ -566,7 +560,7 @@ func TestApp_InitialAlertStateOnStartup(t *testing.T) {
 
 			done := make(chan struct{})
 			go func() {
-				app.Run()
+				_ = app.Run()
 				close(done)
 			}()
 
@@ -646,7 +640,7 @@ func TestApp_ServerStoppedWhenSystrayQuits(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		app.Run()
+		_ = app.Run()
 		close(done)
 	}()
 
