@@ -136,28 +136,47 @@ This marker-based approach provides instant extraction without API calls.
 For session summaries to work, Claude must be instructed to include `[SESSION: ...]` markers. Add this to your `~/.claude/CLAUDE.md` (or project-level CLAUDE.md):
 
 ```markdown
-### Session Summary Protocol
+## Universal Session Summary Protocol
 
-**At the end of every task completion response**, include a summary line:
+**Every response from Claude Code MUST end with a SESSION line.**
 
-[SESSION: <5-7 word description of what was accomplished>]
+This is machine-readable output parsed by the Claude Code Stop hook for context recovery and session tracking. It applies to ALL interactions, not just task completions.
 
-**Subagent Delegation Rule:**
-When work is delegated to subagents (via Task tool), the **main agent** is still
-responsible for the session summary. Subagent responses are internal - the user only
-sees the main agent's final response. The session summary must reflect the
-completed work regardless of whether it was done directly or delegated.
+### Format
+```
+[SESSION: <5-7 word description of what occurred>]
+```
 
-**Format rules:**
-- Exactly one `[SESSION: ...]` line per completion
-- 5-7 words maximum
-- Describes the outcome, not the process
-- No special characters except hyphens
+### Rules
+- **Placement**: MUST be the **last line** of every response (enables reliable parsing)
+- **Length**: 5-7 words maximum
+- **Content**: Describes the outcome/topic, not the process
+- **Characters**: No special characters except hyphens
 
-**Examples:**
+### Response Ending Structure
+Every response ends with:
+```
+[OPT: <category>: <insight>]
+[SESSION: <5-7 word summary>]
+```
+
+### Examples by Interaction Type
+
+**Work completions:**
 - `[SESSION: Fixed transcript parser string handling]`
 - `[SESSION: Added user authentication endpoint]`
-- `[SESSION: Refactored database connection pool]`
+
+**Investigations/research:**
+- `[SESSION: Explored codebase authentication flow]`
+- `[SESSION: Analyzed LaunchAgent restart behavior]`
+
+**Conversations/discussions:**
+- `[SESSION: Discussed SESSION protocol scope]`
+- `[SESSION: Clarified task definition boundaries]`
+
+**Brief exchanges:**
+- `[SESSION: Exchanged New Year greetings]`
+- `[SESSION: Confirmed next steps with {user}]`
 ```
 
 Without this configuration, notifications will show the project name only.
